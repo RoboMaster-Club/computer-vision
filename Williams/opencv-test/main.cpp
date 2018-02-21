@@ -1,5 +1,6 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <omp.h>
 
 
 #define PI 3.14159265358979
@@ -8,7 +9,7 @@ using namespace cv;
 using namespace std;
 
 #define PICTURE_MODE 0
-#define ARGS_MODE 0
+#define ARGS_MODE 1
 
 map<int, vector<int>> solveEllipseForX(RotatedRect rrEllipse) {
     map<int, vector<int>> result;
@@ -252,7 +253,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < ellipseSize; i++) {
             int count = 0;
             /// fast O(n^2) solution
-//#pragma omp parallel for
+#pragma omp parallel for
             for (int j = 0; j < colorPointSize; j++) {
                 if (isPointInEllipse(minEllipse[i], colorPoint[j])) {
                     circle(pPointInEllipse, colorPoint[j], 1, sTargetColor);
