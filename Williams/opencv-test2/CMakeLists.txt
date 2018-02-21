@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.5)
 project(opencv-test2)
 find_package( OpenCV REQUIRED )
 #find_package(OpenMP)
