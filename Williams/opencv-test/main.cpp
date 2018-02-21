@@ -327,7 +327,9 @@ int main(int argc, char **argv) {
                     ellipse(pResultImage, e1, sWhite);
                     ellipse(pResultImage, e2, sWhite);
                     stopFlag = true;
+#ifndef NDEBUG
                     if (playVideo)
+#endif
                         cout << "1 1:" << e1.size.height + e2.size.height << " 2:" << e1.center.y + e2.center.y << " 3:"
                              << abs(e1.size.height - e2.size.height)
                              << " 4:" << abs(e1.center.x - e2.center.x) << endl;

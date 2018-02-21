@@ -84,7 +84,7 @@
   <component name="PropertiesComponent">
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../opencv-test" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -127,12 +127,12 @@
       <workItem from="1517930996588" duration="2776000" />
       <workItem from="1517935531341" duration="1639000" />
       <workItem from="1517938527219" duration="755000" />
-      <workItem from="1519247683778" duration="490000" />
+      <workItem from="1519247683778" duration="625000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="8049000" />
+    <option name="totallyTimeSpent" value="8184000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="-4" width="1920" height="1084" extended-state="6" />
