@@ -1,0 +1,1 @@
+/usr/bin/c++  -g   CMakeFiles/svm_test.dir/main.cpp.o  -o svm_test 

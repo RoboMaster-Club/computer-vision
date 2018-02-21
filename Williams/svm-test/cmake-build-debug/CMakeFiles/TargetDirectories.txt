@@ -1,0 +1,3 @@
+/home/why/CLionProjects/svm-test/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/why/CLionProjects/svm-test/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/why/CLionProjects/svm-test/cmake-build-debug/CMakeFiles/svm_test.dir

@@ -1,0 +1,4 @@
+/home/why/.local/share/JetBrains/Toolbox/apps/CLion/ch-0/173.4548.31/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/why/CLionProjects/opencv-test
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/why/CLionProjects/opencv-test/cmake-build-debug
