@@ -9,7 +9,7 @@ using namespace cv;
 using namespace std;
 
 #define PICTURE_MODE 0
-#define ARGS_MODE 1
+#define ARGS_MODE 0
 
 map<int, vector<int>> solveEllipseForX(RotatedRect rrEllipse) {
     map<int, vector<int>> result;
@@ -152,7 +152,8 @@ int main(int argc, char **argv) {
 #if ARGS_MODE == 1
     VideoCapture cap(argv[1]);
 #else
-    VideoCapture cap("../../RedCar.avi");
+//    VideoCapture cap("../../RedCar.avi");
+    VideoCapture cap(0);
 #endif
     if (!cap.isOpened()) {
         printf("No image data \n");
