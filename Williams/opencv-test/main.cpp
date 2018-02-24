@@ -1,5 +1,6 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <thread>
 
 
 #define PI 3.14159265358979
@@ -37,8 +38,7 @@ map<int, vector<int>> solveEllipseForX(RotatedRect rrEllipse) {
         float x1 = (staticTerm - alternativeTerm) / denominator;
         float x2 = (staticTerm + alternativeTerm) / denominator;
         if (!isnan(x1) && !isnan(x2)) {
-            result[y].push_back((int) round(x1));
-            result[y].push_back((int) round(x2));
+            result[y] = {(int) round(x1), (int) round(x2)};
         } else {
             break;
         }
@@ -108,6 +108,21 @@ bool isPointInEllipse(RotatedRect ellipse, Point p) {
                2) <= 1;
 }
 
+void
+parallelCalculation(vector<RotatedRect> minEllipse, vector<Point> colorPoint, int start, int end, int colorPointSize,
+                    vector<float> *ellipseBrightnessRatio) {
+    for (int i = start; i < end; i++) {
+        int count = 0;
+        for (int j = 0; j < colorPointSize; j++) {
+            if (isPointInEllipse(minEllipse[i], colorPoint[j])) {
+//                circle(pPointInEllipse, colorPoint[j], 1, sTargetColor);
+                count++;
+            }
+        }
+        ellipseBrightnessRatio->push_back(count / (PI * minEllipse[i].size.height * minEllipse[i].size.width) * 4);
+    }
+}
+
 int main(int argc, char **argv) {
 #if ARGS_MODE == 1
     if (argc != 2) {
@@ -156,8 +171,10 @@ int main(int argc, char **argv) {
     pPointImage.create(pSize, type);
     pResultImage.create(pSize, type);
 
-
+    clock_t totalTime = clock();
+    long int frameCount = 0;
     while (pSrcImage.data) {
+        frameCount++;
 //        clock_t startTime, endTime;
 //        startTime = clock();
         /// make the image darker to avoid over expose
@@ -247,18 +264,35 @@ int main(int argc, char **argv) {
         Mat pPointInEllipse = Mat::zeros(pSize, CV_8UC3);
         unsigned int ellipseSize = minEllipse.size();
         unsigned int colorPointSize = colorPoint.size();
-        vector<float> ellipseLightRatio;
+        vector<float> brightnessRatioParallel[4];
 
-        for (int i = 0; i < ellipseSize; i++) {
-            int count = 0;
-            for (int j = 0; j < colorPointSize; j++) {
-                if (isPointInEllipse(minEllipse[i], colorPoint[j])) {
-                    circle(pPointInEllipse, colorPoint[j], 1, sTargetColor);
-                    count++;
-                }
-            }
-//            /// slow O(n^3) solution
+        thread *calculation[4];
+        for (int i = 0; i < 3; i++) {
+            calculation[i] = new thread(parallelCalculation, minEllipse, colorPoint, i * ellipseSize / 4,
+                                        (i + 1) * ellipseSize / 4 - 1, colorPointSize, &brightnessRatioParallel[i]);
+        }
+
+        calculation[3] = new thread(parallelCalculation, minEllipse, colorPoint, 3 * ellipseSize / 4,
+                                    ellipseSize, colorPointSize, &brightnessRatioParallel[3]);
+
+        vector<float> brightnessRatio;
+        for (int i = 0; i < 4; i++) {
+            calculation[i]->join();
+            delete calculation[i];
+            brightnessRatio.insert(brightnessRatio.end(), brightnessRatioParallel[i].begin(),
+                                   brightnessRatioParallel[i].end());
+        }
+
+//        for (int i = 0; i < ellipseSize; i++) {
+//            int count = 0;
+//            for (int j = 0; j < colorPointSize; j++) {
+//                if (isPointInEllipse(minEllipse[i], colorPoint[j])) {
+//                    circle(pPointInEllipse, colorPoint[j], 1, sTargetColor);
+//                    count++;
+//                }
+//            }
 //            map<int, vector<int>> pointsOnEllipse = solveEllipseForX(minEllipse[i]);
+//            int count = 0;
 //            for (auto it = pointsOnEllipse.begin(); it != pointsOnEllipse.end(); it++) {
 //                int x1 = it->second[0];
 //                int x2 = it->second[1];
@@ -288,17 +322,17 @@ int main(int argc, char **argv) {
 //                    }
 //                }
 //            }
-            /// Find the ratio of point inside versus area
-            ellipseLightRatio.push_back(count / (PI * minEllipse[i].size.height * minEllipse[i].size.width) * 4);
-        }
+//            /// Find the ratio of point inside versus area
+//            ellipseBrightnessRatio.push_back(count / (PI * minEllipse[i].size.height * minEllipse[i].size.width) * 4);
+//        }
 #ifndef NDEBUG
         imshow("Point in ellipses", pPointInEllipse);
 #endif
 
         multimap<float, int> ellipseRank;
-        size = ellipseLightRatio.size();
+        size = brightnessRatio.size();
         for (int i = 0; i < size; i++) {
-            ellipseRank.insert(pair<float, int>(ellipseLightRatio[i], i));
+            ellipseRank.insert(pair<float, int>(brightnessRatio[i], i));
         }
 
         pResultImage = Mat::zeros(pSrcImage.size(), CV_8UC3);
@@ -328,10 +362,10 @@ int main(int argc, char **argv) {
 #ifndef NDEBUG
                     if (playVideo)
 #endif
-                        cout << "1 1:" << e1.size.height + e2.size.height << " 2:" << e1.center.y + e2.center.y << " 3:"
-                             << abs(e1.size.height - e2.size.height)
-                             << " 4:" << abs(e1.center.x - e2.center.x) << endl;
-                    break;
+//                        cout << "1 1:" << e1.size.height + e2.size.height << " 2:" << e1.center.y + e2.center.y << " 3:"
+//                             << abs(e1.size.height - e2.size.height)
+//                             << " 4:" << abs(e1.center.x - e2.center.x) << endl;
+                        break;
                 }
             }
             if (stopFlag) break;
@@ -377,24 +411,28 @@ int main(int argc, char **argv) {
 //        endTime = clock();
 //        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
     }
+
+    cout << "average time: " << (double)(clock() - totalTime) / CLOCKS_PER_SEC / frameCount << endl;
+
 #if PICTURE_MODE == 0
     cap.release();
 #endif
 
-    /*
-    /// Test for ellipse algorithm
-    namedWindow("test", WINDOW_AUTOSIZE);
-    Mat test = Mat::zeros(300, 300, CV_8UC3);
-    RotatedRect rrEllipse(Point2f(200, 200), Size2f(50, 100), 15.0);
-    ellipse(test, rrEllipse, Scalar(255, 255, 255), 2, 8);
-    map<int, vector<int>> points = solveEllipseForX(rrEllipse);
 
-    for (map<int, vector<int>>::iterator it = points.begin(); it != points.end(); it++) {
-        circle(test, Point(it->second[0], it->first), 1, sTargetColor);
-        circle(test, Point(it->second[1], it->first), 1, sTargetColor);
-    }
-    imshow("test", test);
-    waitKey(0);
-     */
+/*
+/// Test for ellipse algorithm
+namedWindow("test", WINDOW_AUTOSIZE);
+Mat test = Mat::zeros(300, 300, CV_8UC3);
+RotatedRect rrEllipse(Point2f(200, 200), Size2f(50, 100), 15.0);
+ellipse(test, rrEllipse, Scalar(255, 255, 255), 2, 8);
+map<int, vector<int>> points = solveEllipseForX(rrEllipse);
+
+for (map<int, vector<int>>::iterator it = points.begin(); it != points.end(); it++) {
+    circle(test, Point(it->second[0], it->first), 1, sTargetColor);
+    circle(test, Point(it->second[1], it->first), 1, sTargetColor);
+}
+imshow("test", test);
+waitKey(0);
+ */
     return 0;
 }
