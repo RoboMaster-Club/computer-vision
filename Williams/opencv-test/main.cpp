@@ -1,6 +1,5 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <omp.h>
 
 
 #define PI 3.14159265358979
@@ -252,8 +251,6 @@ int main(int argc, char **argv) {
 
         for (int i = 0; i < ellipseSize; i++) {
             int count = 0;
-            /// fast O(n^2) solution
-#pragma omp parallel for num_threads(4)
             for (int j = 0; j < colorPointSize; j++) {
                 if (isPointInEllipse(minEllipse[i], colorPoint[j])) {
                     circle(pPointInEllipse, colorPoint[j], 1, sTargetColor);
