@@ -22,7 +22,7 @@ def detect(c):
  
             # a square will have an aspect ratio that is approximately
             # equal to one, otherwise, the shape is a rectangle
-            shape = "square" if ar >= 0.40 and ar <= 1.60 else "rectangle"
+            shape = "square" if ar >= 0.95 and ar <= 1.05 else "rectangle"
  
         # if the shape is a pentagon, it will have 5 vertices
         elif len(approx) == 5:
@@ -33,7 +33,7 @@ def detect(c):
             shape = "circle"
  
         # return the name of the shape
-        return (shape, approx)
+        return shape
 
 
 cap = cv2.VideoCapture('RedCar.avi')
@@ -68,8 +68,6 @@ while cap.isOpened():
         
         cnts = cnts[0] if imutils.is_cv2() else cnts[1]
         
-        prev_coords = None
-        
         try:
             for c in cnts:
                 # compute the center of the contour, then detect the name of the
@@ -77,7 +75,7 @@ while cap.isOpened():
                 M = cv2.moments(c)
                 cX = int((M["m10"] / M["m00"]) * ratio)
                 cY = int((M["m01"] / M["m00"]) * ratio)
-                shape, approx = detect(c)
+                shape = detect(c)
 
                 # multiply the contour (x, y)-coordinates by the resize ratio,
                 # then draw the contours and the name of the shape on the image
@@ -88,12 +86,6 @@ while cap.isOpened():
                 if shape == 'rectangle':
                     cv2.drawContours(frame, [c], -1, (0, 255, 0), 2)
                     cv2.putText(frame, 'lightbar', (cX, cY), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-                    
-                    #draw bisecting lines
-                    (x, y, w, h) = cv2.boundingRect(approx)
-                    cv2.line(frame, (int((x+(w/2))), y), (int((x+(w/2))), y+h), (255,0,0), 2)
-                    prev_
-                    
         except:
             pass
         
