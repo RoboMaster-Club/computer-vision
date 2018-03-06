@@ -1,0 +1,4 @@
+/usr/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/why/computer-vision/Williams/opencv-test
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/why/computer-vision/Williams/opencv-test

@@ -1,0 +1,7 @@
+/home/why/computer-vision/Williams/opencv-test/CMakeFiles/rebuild_cache.dir
+/home/why/computer-vision/Williams/opencv-test/CMakeFiles/camera-calibration-test.dir
+/home/why/computer-vision/Williams/opencv-test/CMakeFiles/opencv-test1.dir
+/home/why/computer-vision/Williams/opencv-test/CMakeFiles/opencv-test2.dir
+/home/why/computer-vision/Williams/opencv-test/CMakeFiles/opencv-test3.dir
+/home/why/computer-vision/Williams/opencv-test/CMakeFiles/edit_cache.dir
+/home/why/computer-vision/Williams/opencv-test/CMakeFiles/camera-test.dir

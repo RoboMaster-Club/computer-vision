@@ -1,5 +1,6 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <thread>
 
 
 #define PI 3.14159265358979
@@ -9,6 +10,14 @@ using namespace std;
 
 #define PICTURE_MODE 0
 #define ARGS_MODE 1
+
+void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
+    if (event == EVENT_LBUTTONDOWN) {
+        cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+    } else if (event == EVENT_RBUTTONDOWN) {
+        cout << "Right button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+    }
+}
 
 map<int, vector<int>> solveEllipseForX(RotatedRect rrEllipse) {
     map<int, vector<int>> result;
@@ -99,7 +108,7 @@ bool isPointInEllipse(RotatedRect ellipse, Point p) {
         p.y < ellipse.center.y - ellipse.size.height || p.y > ellipse.center.y + ellipse.size.height) {
         return false;
     }
-    float alpha = ellipse.angle * PI / 180;
+    float alpha = -ellipse.angle * PI / 180;
     float cosa = cos(alpha), sina = sin(alpha);
     return pow((cosa * (p.x - ellipse.center.x) + sina * (p.y - ellipse.center.y)) / ellipse.size.width * 2,
                2) +
@@ -152,7 +161,7 @@ int main(int argc, char **argv) {
     VideoCapture cap(argv[1]);
 #else
     //    VideoCapture cap("../../RedCar.avi");
-        VideoCapture cap(0);
+    VideoCapture cap(0);
 #endif
     if (!cap.isOpened()) {
         printf("No image data \n");
@@ -173,10 +182,11 @@ int main(int argc, char **argv) {
 
     clock_t totalTime = clock();
     long int frameCount = 0;
+    setMouseCallback("Contours", CallBackFunc, NULL);
     while (pSrcImage.data) {
         frameCount++;
-        clock_t startTime, endTime;
-        startTime = clock();
+//        clock_t startTime, endTime;
+//        startTime = clock();
         /// make the image darker to avoid over expose
         pSrcImage.convertTo(pDarkImage, -1, 1, -50);
 #ifndef NDEBUG
@@ -235,10 +245,7 @@ int main(int argc, char **argv) {
         /// Detect edges using Threshold
         threshold(pMarginImage, threshold_output, 200, 255, THRESH_BINARY);
         /// Find contours
-        findContours(threshold_output, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0));
-
-        endTime = clock();
-        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
+        findContours(threshold_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
 
         /// Find the rotated rectangles and ellipses for each contour
         vector<RotatedRect> minEllipse;
@@ -246,7 +253,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < size; i++) {
             if (contours[i].size() > 5) {
                 RotatedRect tmp = fitEllipse(Mat(contours[i]));
-                if ((tmp.angle < 45 || tmp.angle > 135) && tmp.size.height > 3 && tmp.size.width > 3)
+                if ((tmp.angle < 15 || tmp.angle > 165) && tmp.size.height > 3 && tmp.size.width > 3)
                     minEllipse.push_back(tmp);
             }
         }
@@ -267,33 +274,33 @@ int main(int argc, char **argv) {
         Mat pPointInEllipse = Mat::zeros(pSize, CV_8UC3);
         unsigned int ellipseSize = minEllipse.size();
         unsigned int colorPointSize = colorPoint.size();
-//        vector<float> brightnessRatioParallel[4];
+        vector<float> brightnessRatioParallel[4];
 
-//        thread *calculation[4];
-//        for (int i = 0; i < 3; i++) {
-//            calculation[i] = new thread(parallelCalculation, minEllipse, colorPoint, i * ellipseSize / 4,
-//                                        (i + 1) * ellipseSize / 4 - 1, colorPointSize, &brightnessRatioParallel[i]);
-//        }
-//
-//        calculation[3] = new thread(parallelCalculation, minEllipse, colorPoint, 3 * ellipseSize / 4,
-//                                    ellipseSize, colorPointSize, &brightnessRatioParallel[3]);
+        thread *calculation[4];
+        for (int i = 0; i < 3; i++) {
+            calculation[i] = new thread(parallelCalculation, minEllipse, colorPoint, i * ellipseSize / 4,
+                                        (i + 1) * ellipseSize / 4 - 1, colorPointSize, &brightnessRatioParallel[i]);
+        }
+
+        calculation[3] = new thread(parallelCalculation, minEllipse, colorPoint, 3 * ellipseSize / 4,
+                                    ellipseSize, colorPointSize, &brightnessRatioParallel[3]);
 
         vector<float> brightnessRatio;
-//        for (int i = 0; i < 4; i++) {
-//            calculation[i]->join();
-//            delete calculation[i];
-//            brightnessRatio.insert(brightnessRatio.end(), brightnessRatioParallel[i].begin(),
-//                                   brightnessRatioParallel[i].end());
-//        }
+        for (int i = 0; i < 4; i++) {
+            calculation[i]->join();
+            delete calculation[i];
+            brightnessRatio.insert(brightnessRatio.end(), brightnessRatioParallel[i].begin(),
+                                   brightnessRatioParallel[i].end());
+        }
 
-        for (int i = 0; i < ellipseSize; i++) {
-            int count = 0;
-            for (int j = 0; j < colorPointSize; j++) {
-                if (isPointInEllipse(minEllipse[i], colorPoint[j])) {
-                    circle(pPointInEllipse, colorPoint[j], 1, sTargetColor);
-                    count++;
-                }
-            }
+//        for (int i = 0; i < ellipseSize; i++) {
+//            int count = 0;
+//            for (int j = 0; j < colorPointSize; j++) {
+//                if (isPointInEllipse(minEllipse[i], colorPoint[j])) {
+//                    circle(pPointInEllipse, colorPoint[j], 1, sTargetColor);
+//                    count++;
+//                }
+//            }
 //            map<int, vector<int>> pointsOnEllipse = solveEllipseForX(minEllipse[i]);
 //            int count = 0;
 //            for (auto it = pointsOnEllipse.begin(); it != pointsOnEllipse.end(); it++) {
@@ -326,11 +333,8 @@ int main(int argc, char **argv) {
 //                }
 //            }
 //            /// Find the ratio of point inside versus area
-            brightnessRatio.push_back(count / (PI * minEllipse[i].size.height * minEllipse[i].size.width) * 4);
-        }
-
-        endTime = clock();
-        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
+//            ellipseBrightnessRatio.push_back(count / (PI * minEllipse[i].size.height * minEllipse[i].size.width) * 4);
+//        }
 #ifndef NDEBUG
         imshow("Point in ellipses", pPointInEllipse);
 #endif
@@ -356,8 +360,8 @@ int main(int argc, char **argv) {
                 float widthDifferenceRatio = abs(e1.size.width - e2.size.width) / (e1.size.width + e2.size.width);
                 float xDifferenceRatio = abs(e1.center.x - e2.center.x) / (e1.size.height + e2.size.height);
                 float yDifferenceRatio = abs(e1.center.y - e2.center.y) / (e1.size.height + e2.size.height);
-//                if ((it->second == 0 && it2->second == 2) || (it->second == 2 && it2->second == 0)) {
-//                    cout << "";
+//                if ((it->second == 5 && it2->second == 6) || (it->second == 6 && it2->second == 5)) {
+//                    cout << endl;
 //                }
                 if ((angleDifference < 7 || angleDifference > 173) && heightDifferenceRatio < 0.1 &&
                     xDifferenceRatio > 0.5 &&
@@ -365,60 +369,49 @@ int main(int argc, char **argv) {
                     ellipse(pResultImage, e1, sWhite);
                     ellipse(pResultImage, e2, sWhite);
                     stopFlag = true;
-#ifndef NDEBUG
-                    if (playVideo)
-#endif
-//                        cout << "1 1:" << e1.size.height + e2.size.height << " 2:" << e1.center.y + e2.center.y << " 3:"
-//                             << abs(e1.size.height - e2.size.height)
-//                             << " 4:" << abs(e1.center.x - e2.center.x) << endl;
-                        break;
                 }
             }
             if (stopFlag) break;
         }
-        if (stopFlag) {
+        while (true) {
+            if (stopFlag) {
 
-            float angle1 = e1.angle * PI / 180;
-            float angle2 = e2.angle * PI / 180;
+                float angle1 = e1.angle * PI / 180;
+                float angle2 = e2.angle * PI / 180;
 
-            Point p1((int) round(e1.center.x - sin(angle1) * e1.size.height),
-                     (int) round(e1.center.y + cos(angle1) * e1.size.height));
-            Point p2((int) round(e1.center.x + sin(angle1) * e1.size.height),
-                     (int) round(e1.center.y - cos(angle1) * e1.size.height));
-            Point p3((int) round(e2.center.x - sin(angle2) * e2.size.height),
-                     (int) round(e2.center.y + cos(angle2) * e2.size.height));
-            Point p4((int) round(e2.center.x + sin(angle2) * e2.size.height),
-                     (int) round(e2.center.y - cos(angle2) * e2.size.height));
+                Point p1((int) round(e1.center.x - sin(angle1) * e1.size.height),
+                         (int) round(e1.center.y + cos(angle1) * e1.size.height));
+                Point p2((int) round(e1.center.x + sin(angle1) * e1.size.height),
+                         (int) round(e1.center.y - cos(angle1) * e1.size.height));
+                Point p3((int) round(e2.center.x - sin(angle2) * e2.size.height),
+                         (int) round(e2.center.y + cos(angle2) * e2.size.height));
+                Point p4((int) round(e2.center.x + sin(angle2) * e2.size.height),
+                         (int) round(e2.center.y - cos(angle2) * e2.size.height));
 
-            line(pResultImage, p1.y < p2.y ? p1 : p2, p1.y > p2.y ? p1 : p2, sTargetColor, 4);
-            line(pResultImage, p1.y > p2.y ? p1 : p2, p3.y > p4.y ? p3 : p4, sTargetColor, 4);
-            line(pResultImage, p3.y > p4.y ? p3 : p4, p3.y < p4.y ? p3 : p4, sTargetColor, 4);
-            line(pResultImage, p3.y < p4.y ? p3 : p4, p1.y < p2.y ? p1 : p2, sTargetColor, 4);
-            float distance = 70 / (e1.size.height + e2.size.height);
+                line(pResultImage, p1.y < p2.y ? p1 : p2, p1.y > p2.y ? p1 : p2, sTargetColor, 4);
+                line(pResultImage, p1.y > p2.y ? p1 : p2, p3.y > p4.y ? p3 : p4, sTargetColor, 4);
+                line(pResultImage, p3.y > p4.y ? p3 : p4, p3.y < p4.y ? p3 : p4, sTargetColor, 4);
+                line(pResultImage, p3.y < p4.y ? p3 : p4, p1.y < p2.y ? p1 : p2, sTargetColor, 4);
+                float distance = 70 / (e1.size.height + e2.size.height);
 
-            putText(pResultImage, to_string(distance) + " m", Point(100, 100), FONT_HERSHEY_SIMPLEX, 1,
-                    sTargetColor, 2);
+                putText(pResultImage, to_string(distance) + " m", Point(100, 100), FONT_HERSHEY_SIMPLEX, 1,
+                        sTargetColor, 2);
+            }
+            imshow("Result image", pResultImage);
+            /// Press  ESC on keyboard to  exit
+            char c = (char) waitKey(0);
+            if (c == 27)
+                break;
+            else if (c == 28) {
+                cout << "1 1:" << e1.size.height + e2.size.height << " 2:" << e1.center.y + e2.center.y << " 3:"
+                     << abs(e1.size.height - e2.size.height)
+                     << " 4:" << abs(e1.center.x - e2.center.x) << endl;
+                cap >> pSrcImage;
+            }
         }
 
-        endTime = clock();
-        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
-#ifndef NDEBUG
-        imshow("Result image", pResultImage);
-
-
-        /// Press  ESC on keyboard to  exit
-        char c = (char) waitKey(1);
-        if (c == 27)
-            break;
-#if PICTURE_MODE == 0
-        else if (c == ' ')
-            playVideo = !playVideo;
-        if (playVideo)
-#endif
-#endif
-            cap >> pSrcImage;
-        endTime = clock();
-        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl << endl;
+//        endTime = clock();
+//        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
     }
 
 //    cout << "average time: " << (double)(clock() - totalTime) / CLOCKS_PER_SEC / frameCount << endl;
@@ -426,5 +419,22 @@ int main(int argc, char **argv) {
 #if PICTURE_MODE == 0
     cap.release();
 #endif
+
+
+/*
+/// Test for ellipse algorithm
+namedWindow("test", WINDOW_AUTOSIZE);
+Mat test = Mat::zeros(300, 300, CV_8UC3);
+RotatedRect rrEllipse(Point2f(200, 200), Size2f(50, 100), 15.0);
+ellipse(test, rrEllipse, Scalar(255, 255, 255), 2, 8);
+map<int, vector<int>> points = solveEllipseForX(rrEllipse);
+
+for (map<int, vector<int>>::iterator it = points.begin(); it != points.end(); it++) {
+    circle(test, Point(it->second[0], it->first), 1, sTargetColor);
+    circle(test, Point(it->second[1], it->first), 1, sTargetColor);
+}
+imshow("test", test);
+waitKey(0);
+ */
     return 0;
 }

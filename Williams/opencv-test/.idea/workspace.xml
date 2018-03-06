@@ -2,19 +2,67 @@
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true" buildAllGenerated="true">
     <generated>
-      <config projectName="opencv-test" targetName="opencv-test" />
+      <config projectName="opencv-test" targetName="opencv-test3" />
+      <config projectName="opencv-test" targetName="opencv-test2" />
+      <config projectName="opencv-test" targetName="opencv-test1" />
+      <config projectName="opencv-test" targetName="camera-calibration-test" />
+      <config projectName="opencv-test" targetName="camera-test" />
     </generated>
   </component>
   <component name="CMakeSettings" AUTO_RELOAD="true">
     <configurations>
-      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" GENERATION_DIR="." BUILD_OPTIONS="-j 4" />
-      <configuration PROFILE_NAME="Release" CONFIG_NAME="Release" GENERATION_DIR="." BUILD_OPTIONS="-j 4" />
+      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" GENERATION_DIR="." />
     </configurations>
   </component>
   <component name="ChangeListManager">
     <list default="true" id="663709c0-2f2e-4ecb-9742-cbb9b948ff1e" name="Default" comment="enable parallel calculation">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change beforePath="$PROJECT_DIR$/main.cpp" afterPath="$PROJECT_DIR$/main.cpp" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" afterPath="$PROJECT_DIR$/CMakeLists.txt" />
+      <change beforePath="$PROJECT_DIR$/camera-calibration-test.cpp" afterPath="$PROJECT_DIR$/camera-calibration-test.cpp" />
+      <change beforePath="$PROJECT_DIR$/opencv-test1.cpp" afterPath="$PROJECT_DIR$/opencv-test1.cpp" />
+      <change beforePath="$PROJECT_DIR$/opencv-test2.cpp" afterPath="$PROJECT_DIR$/opencv-test2.cpp" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/.idea/codeStyles/Project.xml" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/.idea/misc.xml" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/.idea/modules.xml" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/.idea/opencv-test2.iml" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/.idea/workspace.xml" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/CMakeLists.txt" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeCache.txt" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/3.5.1/CMakeCCompiler.cmake" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/3.5.1/CMakeCXXCompiler.cmake" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/3.5.1/CMakeDetermineCompilerABI_C.bin" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/3.5.1/CMakeDetermineCompilerABI_CXX.bin" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/3.5.1/CMakeSystem.cmake" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/3.5.1/CompilerIdC/CMakeCCompilerId.c" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/3.5.1/CompilerIdC/a.out" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/3.5.1/CompilerIdCXX/CMakeCXXCompilerId.cpp" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/3.5.1/CompilerIdCXX/a.out" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/CMakeDirectoryInformation.cmake" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/CMakeOutput.log" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/Makefile.cmake" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/Makefile2" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/TargetDirectories.txt" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/clion-environment.txt" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/clion-log.txt" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/cmake.check_cache" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/feature_tests.bin" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/feature_tests.c" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/feature_tests.cxx" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/opencv-test2.dir/DependInfo.cmake" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/opencv-test2.dir/build.make" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/opencv-test2.dir/cmake_clean.cmake" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/opencv-test2.dir/depend.make" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/opencv-test2.dir/flags.make" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/opencv-test2.dir/link.txt" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/opencv-test2.dir/progress.make" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/CMakeFiles/progress.marks" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/Makefile" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/cmake_install.cmake" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/opencv-test.cbp" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/opencv-test2" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/opencv-test2.cbp" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/cmake-build-debug/opencv_test2.cbp" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/../opencv-test2/main.cpp" afterPath="" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <ignored path="$PROJECT_DIR$/CMakeFiles/" />
@@ -26,17 +74,43 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="main.cpp" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/main.cpp">
+      <file leaf-file-name="opencv-test1.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="101">
-              <caret line="255" column="39" lean-forward="false" selection-start-line="255" selection-start-column="39" selection-end-line="255" selection-end-column="39" />
+            <state relative-caret-position="2376">
+              <caret line="132" column="14" lean-forward="false" selection-start-line="132" selection-start-column="14" selection-end-line="132" selection-end-column="14" />
               <folding>
-                <element signature="e#4601#4714#0" expanded="true" />
-                <element signature="e#4781#4818#0" expanded="true" />
+                <element signature="e#0#19#0" expanded="true" />
+                <element signature="e#5156#5269#0" expanded="true" />
+                <element signature="e#5336#5408#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="opencv-test2.cpp" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/opencv-test2.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="170">
+              <caret line="97" column="14" lean-forward="false" selection-start-line="97" selection-start-column="14" selection-end-line="97" selection-end-column="14" />
+              <folding>
+                <element signature="e#0#19#0" expanded="true" />
+                <element signature="e#1039#1152#0" expanded="true" />
+                <element signature="e#1219#1291#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="camera-test.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/camera-test.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="0">
+              <caret line="0" column="9" lean-forward="false" selection-start-line="0" selection-start-column="9" selection-end-line="0" selection-end-column="9" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -44,8 +118,8 @@
       <file leaf-file-name="CMakeLists.txt" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="152">
-              <caret line="10" column="26" lean-forward="false" selection-start-line="10" selection-start-column="26" selection-end-line="10" selection-end-column="26" />
+            <state relative-caret-position="342">
+              <caret line="19" column="0" lean-forward="false" selection-start-line="19" selection-start-column="0" selection-end-line="19" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -55,11 +129,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>cv::</find>
-      <find>diffImage</find>
-      <find>&quot;tmp&quot;</find>
-      <find>g_darkImage</find>
-      <find>tmp</find>
       <find>pointimage</find>
       <find>drawing</find>
       <find>g_pointImage</find>
@@ -82,6 +151,14 @@
       <find>Scalar</find>
       <find>differ</find>
       <find>ellipse</find>
+      <find>ellipseBrightnessRatio</find>
+      <find>contour</find>
+      <find>pResultImage</find>
+      <find>hierarchy</find>
+      <find>contours</find>
+      <find>pBinaryBrightness</find>
+      <find>pMarginImage</find>
+      <find>pSrcImage</find>
     </findStrings>
     <replaceStrings>
       <replace>g_srcImage</replace>
@@ -96,6 +173,8 @@
       <replace>#ifdef NDEBUG</replace>
       <replace>#ifndef NDEBUG</replace>
       <replace>sTargetColor</replace>
+      <replace>pResult</replace>
+      <replace>pSrc</replace>
     </replaceStrings>
     <dirStrings>
       <dir>/usr/lib/gcc/x86_64-linux-gnu/5/include</dir>
@@ -110,8 +189,12 @@
         <option value="$PROJECT_DIR$/stdafx.h" />
         <option value="$PROJECT_DIR$/cmake-build-debug/targetver.h" />
         <option value="$PROJECT_DIR$/stdafx.cpp" />
-        <option value="$PROJECT_DIR$/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/main.cpp" />
+        <option value="$PROJECT_DIR$/camera-test.cpp" />
+        <option value="$PROJECT_DIR$/CMakeLists.txt" />
+        <option value="$PROJECT_DIR$/camera-calibration-test.cpp" />
+        <option value="$PROJECT_DIR$/opencv-test1.cpp" />
+        <option value="$PROJECT_DIR$/opencv-test2.cpp" />
       </list>
     </option>
   </component>
@@ -123,10 +206,10 @@
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="307" />
-    <option name="y" value="1142" />
-    <option name="width" value="1299" />
-    <option name="height" value="764" />
+    <option name="x" value="466" />
+    <option name="y" value="1210" />
+    <option name="width" value="973" />
+    <option name="height" value="542" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -175,16 +258,36 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Application.opencv-test">
-    <configuration name="Build All" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="opencv-test" RUN_TARGET_NAME="opencv-test" EXPLICIT_BUILD_TARGET_NAME="all">
+  <component name="RunManager" selected="Application.opencv-test2">
+    <configuration name="Build All" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="opencv-test" RUN_TARGET_NAME="opencv-test2" EXPLICIT_BUILD_TARGET_NAME="all">
       <envs />
     </configuration>
-    <configuration name="opencv-test" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="test2.png" PASS_PARENT_ENVS_2="true" PROJECT_NAME="opencv-test" TARGET_NAME="opencv-test" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="opencv-test" RUN_TARGET_NAME="opencv-test">
+    <configuration name="camera-calibration-test" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="opencv-test" TARGET_NAME="camera-calibration-test" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="opencv-test" RUN_TARGET_NAME="opencv-test2">
       <envs />
     </configuration>
-    <list size="2">
+    <configuration name="camera-test" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="opencv-test" TARGET_NAME="camera-test" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="opencv-test" RUN_TARGET_NAME="opencv-test2">
+      <envs />
+    </configuration>
+    <configuration name="opencv-test" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$USER_HOME$/RedCar.avi" PASS_PARENT_ENVS_2="true" PROJECT_NAME="opencv-test" TARGET_NAME="opencv-test" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="opencv-test" RUN_TARGET_NAME="opencv-test2">
+      <envs />
+    </configuration>
+    <configuration name="opencv-test1" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$USER_HOME$/test.mp4" PASS_PARENT_ENVS_2="true" PROJECT_NAME="opencv-test" TARGET_NAME="opencv-test1" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="opencv-test" RUN_TARGET_NAME="opencv-test2">
+      <envs />
+    </configuration>
+    <configuration name="opencv-test2" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$USER_HOME$/test.mp4" PASS_PARENT_ENVS_2="true" PROJECT_NAME="opencv-test" TARGET_NAME="opencv-test2" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="opencv-test" RUN_TARGET_NAME="opencv-test2">
+      <envs />
+    </configuration>
+    <configuration name="opencv-test3" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="opencv-test" TARGET_NAME="opencv-test3" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="opencv-test" RUN_TARGET_NAME="opencv-test3">
+      <envs />
+    </configuration>
+    <list size="7">
       <item index="0" class="java.lang.String" itemvalue="Application.Build All" />
       <item index="1" class="java.lang.String" itemvalue="Application.opencv-test" />
+      <item index="2" class="java.lang.String" itemvalue="Application.camera-calibration-test" />
+      <item index="3" class="java.lang.String" itemvalue="Application.camera-test" />
+      <item index="4" class="java.lang.String" itemvalue="Application.opencv-test1" />
+      <item index="5" class="java.lang.String" itemvalue="Application.opencv-test2" />
+      <item index="6" class="java.lang.String" itemvalue="Application.opencv-test3" />
     </list>
   </component>
   <component name="ShelveChangesManager" show_recycled="false">
@@ -239,6 +342,19 @@
       <workItem from="1519202275641" duration="4000" />
       <workItem from="1519247648752" duration="34000" />
       <workItem from="1519248369363" duration="2454000" />
+      <workItem from="1519492998765" duration="1521000" />
+      <workItem from="1519501992707" duration="5969000" />
+      <workItem from="1519606934524" duration="728000" />
+      <workItem from="1519610835618" duration="5343000" />
+      <workItem from="1519689830034" duration="268000" />
+      <workItem from="1519788115915" duration="2966000" />
+      <workItem from="1519874236231" duration="3935000" />
+      <workItem from="1520101824579" duration="598000" />
+      <workItem from="1520108106984" duration="4000" />
+      <workItem from="1520108310774" duration="956000" />
+      <workItem from="1520207435781" duration="250000" />
+      <workItem from="1520289652898" duration="8286000" />
+      <workItem from="1520298242215" duration="7000" />
     </task>
     <task id="LOCAL-00001" summary="minor fix">
       <created>1519248683498</created>
@@ -258,40 +374,30 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="126668000" />
+    <option name="totallyTimeSpent" value="157499000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1382" height="744" extended-state="6" />
+    <frame x="466" y="1210" width="1303" height="780" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.12884334" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25441968" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.4564184" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
+      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.16564417" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2244898" sideWeight="0.50416666" order="8" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4047619" sideWeight="0.49583334" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4159159" sideWeight="0.49583334" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.24980783" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.39591837" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.39468303" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
-      <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.2777778" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.26876876" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.45645645" sideWeight="0.5" order="11" side_tool="false" content_ui="tabs" />
-      <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2244898" sideWeight="0.50416666" order="8" side_tool="true" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4047619" sideWeight="0.49583334" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.12913144" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.24980783" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.39591837" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
     </layout>
     <layout-to-restore>
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -328,13 +434,21 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="66" />
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/opencv-test1.cpp</url>
+          <line>144</line>
+          <option name="timeStamp" value="66" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/opencv-test1.cpp</url>
+          <line>359</line>
+          <option name="timeStamp" value="67" />
+        </line-breakpoint>
+      </breakpoints>
+      <option name="time" value="72" />
     </breakpoint-manager>
-    <watches-manager>
-      <configuration name="CMakeRunConfiguration">
-        <watch expression="colorPoint" language="ObjectiveC" />
-      </configuration>
-    </watches-manager>
+    <watches-manager />
   </component>
   <component name="debuggerHistoryManager">
     <expressions id="watch">
@@ -363,47 +477,6 @@
     </expressions>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file:///usr/include/c++/5/ext/new_allocator.h" />
-    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="144">
-          <caret line="8" column="7" lean-forward="false" selection-start-line="8" selection-start-column="7" selection-end-line="8" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="108">
@@ -414,13 +487,14 @@
     <entry file="file:///usr/include/c++/5/bits/stl_iterator.h" />
     <entry file="file:///usr/include/c++/5/bits/stl_tree.h" />
     <entry file="file:///usr/include/c++/5/bits/stl_iterator_base_funcs.h" />
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="180">
           <caret line="10" column="22" lean-forward="false" selection-start-line="10" selection-start-column="22" selection-end-line="10" selection-end-column="22" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -432,13 +506,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3924">
           <caret line="218" column="78" lean-forward="false" selection-start-line="218" selection-start-column="78" selection-end-line="218" selection-end-column="78" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -450,13 +525,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3924">
           <caret line="218" column="78" lean-forward="false" selection-start-line="218" selection-start-column="78" selection-end-line="218" selection-end-column="78" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -471,13 +547,14 @@
     <entry file="file:///usr/local/include/opencv2/core/types.hpp" />
     <entry file="file:///usr/include/c++/5/bits/stl_vector.h" />
     <entry file="file:///usr/local/include/opencv2/core/matx.hpp" />
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3816">
           <caret line="212" column="0" lean-forward="false" selection-start-line="212" selection-start-column="0" selection-end-line="212" selection-end-column="0" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -490,13 +567,14 @@
       </provider>
     </entry>
     <entry file="file:///usr/local/include/opencv2/core/matx.hpp" />
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="3474">
           <caret line="193" column="0" lean-forward="true" selection-start-line="193" selection-start-column="0" selection-end-line="193" selection-end-column="0" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -508,13 +586,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="576">
           <caret line="32" column="51" lean-forward="true" selection-start-line="32" selection-start-column="51" selection-end-line="32" selection-end-column="51" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -526,13 +605,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2610">
           <caret line="145" column="0" lean-forward="false" selection-start-line="145" selection-start-column="0" selection-end-line="145" selection-end-column="0" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -544,13 +624,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2448">
           <caret line="136" column="35" lean-forward="true" selection-start-line="136" selection-start-column="35" selection-end-line="136" selection-end-column="35" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -562,13 +643,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1278">
           <caret line="71" column="59" lean-forward="true" selection-start-line="71" selection-start-column="59" selection-end-line="71" selection-end-column="59" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -580,13 +662,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1386">
           <caret line="77" column="14" lean-forward="false" selection-start-line="77" selection-start-column="14" selection-end-line="77" selection-end-column="14" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -598,13 +681,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1008">
           <caret line="56" column="16" lean-forward="false" selection-start-line="56" selection-start-column="16" selection-end-line="56" selection-end-column="16" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -624,21 +708,63 @@
     <entry file="file:///usr/include/c++/5/bits/alloc_traits.h" />
     <entry file="file:///usr/include/c++/5/bits/stl_tree.h" />
     <entry file="file:///usr/include/c++/5/bits/stl_map.h" />
-    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
+    <entry file="file://$PROJECT_DIR$/CMakeCache.txt">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="10" column="26" lean-forward="false" selection-start-line="10" selection-start-column="26" selection-end-line="10" selection-end-column="26" />
+        <state relative-caret-position="468">
+          <caret line="26" column="43" lean-forward="true" selection-start-line="26" selection-start-column="43" selection-end-line="26" selection-end-column="43" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/camera-calibration-test.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-684">
+          <caret line="10" column="32" lean-forward="false" selection-start-line="10" selection-start-column="32" selection-end-line="10" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/opencv-test3.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1242">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/camera-test.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="9" lean-forward="false" selection-start-line="0" selection-start-column="9" selection-end-line="0" selection-end-column="9" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="101">
-          <caret line="255" column="39" lean-forward="false" selection-start-line="255" selection-start-column="39" selection-end-line="255" selection-end-column="39" />
+        <state relative-caret-position="342">
+          <caret line="19" column="0" lean-forward="false" selection-start-line="19" selection-start-column="0" selection-end-line="19" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/opencv-test1.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2376">
+          <caret line="132" column="14" lean-forward="false" selection-start-line="132" selection-start-column="14" selection-end-line="132" selection-end-column="14" />
           <folding>
-            <element signature="e#4601#4714#0" expanded="true" />
-            <element signature="e#4781#4818#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#5156#5269#0" expanded="true" />
+            <element signature="e#5336#5408#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/opencv-test2.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="170">
+          <caret line="97" column="14" lean-forward="false" selection-start-line="97" selection-start-column="14" selection-end-line="97" selection-end-column="14" />
+          <folding>
+            <element signature="e#0#19#0" expanded="true" />
+            <element signature="e#1039#1152#0" expanded="true" />
+            <element signature="e#1219#1291#0" expanded="true" />
           </folding>
         </state>
       </provider>
