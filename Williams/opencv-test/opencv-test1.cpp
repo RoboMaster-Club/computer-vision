@@ -8,7 +8,6 @@ using namespace cv;
 using namespace std;
 
 #define PICTURE_MODE 0
-#define ARGS_MODE 1
 
 map<int, vector<int>> solveEllipseForX(RotatedRect rrEllipse) {
     map<int, vector<int>> result;
@@ -142,25 +141,21 @@ int main(int argc, char **argv) {
     int nTargetColor = 2;
     Mat pSrcImage, pDstImage, pGrayImage, pPointImage, pDarkImage, pMarginImage, pResultImage;
 #if PICTURE_MODE == 1
-#if ARGS_MODE == 1
     pSrcImage = imread(argv[1], 1);
 #else
-    pSrcImage = imread("../../test1.png", 1);
-#endif
-#else
-#if ARGS_MODE == 1
-    VideoCapture cap(argv[1]);
-#else
-    //    VideoCapture cap("../../RedCar.avi");
-        VideoCapture cap(0);
-#endif
+    VideoCapture cap;
+    if (argc == 2) {
+        cap.open(argv[1]);
+    } else {
+        cap.open(0);
+    }
     if (!cap.isOpened()) {
         printf("No image data \n");
         return -1;
     }
 
     cap >> pSrcImage;
-#endif
+#endif //if PICTURE_MODE == 1
     Size pSize = pSrcImage.size();
     int type = pSrcImage.type();
     int height = pSrcImage.rows;
@@ -229,16 +224,10 @@ int main(int argc, char **argv) {
 //        }
 
         /// Margin detection and ellipse fitting
-        Mat threshold_output;
         vector<Vec4i> hierarchy;
         std::vector<std::vector<Point>> contours;
-        /// Detect edges using Threshold
-        threshold(pMarginImage, threshold_output, 200, 255, THRESH_BINARY);
         /// Find contours
-        findContours(threshold_output, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0));
-
-        endTime = clock();
-        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
+        findContours(pMarginImage, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0));
 
         /// Find the rotated rectangles and ellipses for each contour
         vector<RotatedRect> minEllipse;
@@ -329,8 +318,6 @@ int main(int argc, char **argv) {
             brightnessRatio.push_back(count / (PI * minEllipse[i].size.height * minEllipse[i].size.width) * 4);
         }
 
-        endTime = clock();
-        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
 #ifndef NDEBUG
         imshow("Point in ellipses", pPointInEllipse);
 #endif
@@ -399,9 +386,6 @@ int main(int argc, char **argv) {
             putText(pResultImage, to_string(distance) + " m", Point(100, 100), FONT_HERSHEY_SIMPLEX, 1,
                     sTargetColor, 2);
         }
-
-        endTime = clock();
-        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
 #ifndef NDEBUG
         imshow("Result image", pResultImage);
 
@@ -417,11 +401,9 @@ int main(int argc, char **argv) {
 #endif
 #endif
             cap >> pSrcImage;
-        endTime = clock();
-        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl << endl;
     }
 
-//    cout << "average time: " << (double)(clock() - totalTime) / CLOCKS_PER_SEC / frameCount << endl;
+    cout << "average time: " << (double)(clock() - totalTime) / CLOCKS_PER_SEC / frameCount << endl;
 
 #if PICTURE_MODE == 0
     cap.release();

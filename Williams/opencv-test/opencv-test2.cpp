@@ -64,7 +64,6 @@ int main(int argc, char **argv) {
 #ifndef NDEBUG
         imshow("Src", pSrc);
 #endif
-        pBinaryColor = Mat::zeros(imgSize, CV_8UC1);
         startTime = clock();
         cvtColor(pSrc, pGary, COLOR_RGB2GRAY);//convert the original image into gray image
         //threshold(pGary, pBinaryBrightness, 200, 255, THRESH_BINARY);//convert gray image into binary brightness image
@@ -94,9 +93,9 @@ int main(int argc, char **argv) {
 //        pEnemyColor = pBinaryBrightness & pBinaryColor;
         blur(pBinaryColor, pBinaryColor, Size(3, 3));
         Canny(pBinaryColor, pMarginImage, 100, 200, 3);
-        findContours(pMarginImage, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
 #ifndef NDEBUG
         imshow("Contours", pMarginImage);
+        findContours(pMarginImage, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
 #endif
         /*
         vector<RotatedRect> minEllipse;
