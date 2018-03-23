@@ -147,12 +147,22 @@ int main(int argc, char **argv) {
     if (argc == 2) {
         cap.open(argv[1]);
     } else {
-        cap.open(0);
+        cap.open(1);
     }
     if (!cap.isOpened()) {
         printf("No image data \n");
         return -1;
     }
+
+    cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
+    cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
+    cap.set(CV_CAP_PROP_FPS, 30);
+    cap.set(CV_CAP_PROP_BRIGHTNESS, 0);
+    cap.set(CV_CAP_PROP_CONTRAST, 1);
+    cap.set(CV_CAP_PROP_SATURATION, 0.5);
+    cap.set(CV_CAP_PROP_HUE, 0.5);
+    cap.set(CV_CAP_PROP_GAIN, 0);
+    cap.set(CV_CAP_PROP_EXPOSURE, 0.4);
 
     cap >> pSrcImage;
 #endif //if PICTURE_MODE == 1
