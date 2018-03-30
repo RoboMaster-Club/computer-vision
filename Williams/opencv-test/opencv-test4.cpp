@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
     if (argc == 2) {
         cap.open(argv[1]);
     } else {
-        cap.open(1);
+        cap.open(2);
     }
     if (!cap.isOpened()) {
         printf("No image data \n");
@@ -174,11 +174,20 @@ int main(int argc, char **argv) {
     cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
     cap.set(CV_CAP_PROP_FPS, 30);
     cap.set(CV_CAP_PROP_BRIGHTNESS, 0);
-    cap.set(CV_CAP_PROP_CONTRAST, 50);
-    cap.set(CV_CAP_PROP_SATURATION, 50);
-    cap.set(CV_CAP_PROP_HUE, 50);
+    cap.set(CV_CAP_PROP_CONTRAST, 1);
+    cap.set(CV_CAP_PROP_SATURATION, 1);
+    cap.set(CV_CAP_PROP_HUE, 0);
     cap.set(CV_CAP_PROP_GAIN, 0);
-    cap.set(CV_CAP_PROP_EXPOSURE, 0.3);
+    cap.set(CV_CAP_PROP_EXPOSURE, 0.05);
+
+    printf("width = %.2f\n", cap.get(CV_CAP_PROP_FRAME_WIDTH));
+    printf("height = %.2f\n", cap.get(CV_CAP_PROP_FRAME_HEIGHT));
+    printf("fbs = %.2f\n", cap.get(CV_CAP_PROP_FPS));
+    printf("brightness = %.2f\n", cap.get(CV_CAP_PROP_BRIGHTNESS));
+    printf("contrast = %.2f\n", cap.get(CV_CAP_PROP_CONTRAST));
+    printf("saturation = %.2f\n", cap.get(CV_CAP_PROP_SATURATION));
+    printf("hue = %.2f\n", cap.get(CV_CAP_PROP_HUE));
+    printf("exposure = %.2f\n", cap.get(CV_CAP_PROP_EXPOSURE));
 
     cap >> pSrcImage;
 #endif //if PICTURE_MODE == 1
@@ -370,7 +379,7 @@ int main(int argc, char **argv) {
 #endif //ifndef NDEBUG
 
         endTime = clock();
-//        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl << endl;
+        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
     }
 
     cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << endl;
