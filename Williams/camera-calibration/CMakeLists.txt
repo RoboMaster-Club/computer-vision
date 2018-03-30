@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.5)
+project(opencv-test)
+find_package(OpenCV REQUIRED)
+set(CMAKE_CXX_STANDARD 11)
+add_executable(camera-calibration-test camera-calibration-test.cpp)
+target_link_libraries(camera-calibration-test ${OpenCV_LIBS})
+add_executable(camera-after-calibration camera-after-calibration.cpp)
+target_link_libraries(camera-after-calibration ${OpenCV_LIBS})
