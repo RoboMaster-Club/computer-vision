@@ -1,3 +1,0 @@
-/home/why/computer-vision/Williams/opencv-test2/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/why/computer-vision/Williams/opencv-test2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/why/computer-vision/Williams/opencv-test2/cmake-build-debug/CMakeFiles/opencv-test2.dir

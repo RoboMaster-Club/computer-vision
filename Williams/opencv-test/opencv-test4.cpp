@@ -1,6 +1,5 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
-#include <libsvm/svm.h>
 
 
 #define PI 3.14159265358979

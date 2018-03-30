@@ -18,23 +18,8 @@ typedef struct Armor {
     float velocity_z;
 } Armor;
 
-void gammaCorrection(const Mat &img, const double gamma_, Mat &res) {
-    CV_Assert(gamma_ >= 0);
-    //![changing-contrast-brightness-gamma-correction]
-    Mat lookUpTable(1, 256, CV_8U);
-    uchar *p = lookUpTable.ptr();
-    for (int i = 0; i < 256; ++i)
-        p[i] = saturate_cast<uchar>(pow(i / 255.0, gamma_) * 255.0);
-
-    res = img.clone();
-    LUT(img, lookUpTable, res);
-    //![changing-contrast-brightness-gamma-correction]
-
-//    hconcat(img, res, res);
-}
-
 int armorComp(Armor a1, Armor a2) {
-
+	return 0;
 }
 
 int main(int argc, char **argv) {
@@ -53,7 +38,7 @@ int main(int argc, char **argv) {
     if (argc == 2) {
         cap.open(argv[1]);
     } else {
-        cap.open(2);
+        cap.open(0);
     }
     if (!cap.isOpened()) {
         printf("No image data \n");
@@ -113,7 +98,16 @@ int main(int argc, char **argv) {
         startTime = clock();
         /// make the image darker to avoid over expose
 //        pSrcImage.convertTo(pDarkImage, -1, 1, -50);
-        gammaCorrection(pSrcImage, 4, pDarkImage);
+        //gammaCorrection(pSrcImage, 4, pDarkImage);
+		//gamma correction
+
+		Mat lookUpTable(1, 256, CV_8U);
+		uchar *p = lookUpTable.ptr();
+		for (int i = 0; i < 256; ++i)
+			p[i] = saturate_cast<uchar>(pow(i / 255.0, 4) * 255.0);
+
+		LUT(pSrcImage, lookUpTable, pDarkImage);
+
 #ifndef NDEBUG
         imshow("Original Image", pDarkImage);
 #endif
