@@ -8,7 +8,9 @@ using namespace std;
 
 #define PICTURE_MODE 0
 
-typedef struct Armor {
+Mat pHSV;
+
+typedef struct _Armor {
     float id;
     float x;
     float y;
@@ -18,17 +20,36 @@ typedef struct Armor {
     float velocity_z;
 } Armor;
 
-int armorComp(Armor a1, Armor a2) {
-	return 0;
+typedef struct _SearchArea {
+    float center;
+    float size;
+} SearchArea;
+
+#ifndef NDEBUG
+
+void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
+    if (event == EVENT_LBUTTONDOWN) {
+        Point p = Point(x, y);
+        cout << pHSV.at<Vec3b>(p) << endl;
+    }
 }
+
+#endif
 
 int main(int argc, char **argv) {
 
     ///variables
     Scalar sWhite = Scalar(255, 255, 255);
-    Scalar sTargetColor = Scalar(0, 0, 255);
     int nTargetColor = 2;
-    Mat pSrcImage, pDstImage, pGrayImage, pDarkImage, pMarginImage, pResultImage, pContourEllipse, pContour, pBinaryColor, pBinaryBrightness, pHSV;
+    const int TARGET_RED = 2;
+    const int TARGET_BLUE = 0;
+    Scalar sTargetColor;
+    if (nTargetColor == TARGET_BLUE) {
+        sTargetColor = Scalar(255, 0, 0);
+    } else {
+        sTargetColor = Scalar(0, 0, 255);
+    }
+    Mat pSrcImage, pDstImage, pGrayImage, pDarkImage, pMarginImage, pResultImage, pContourEllipse, pContour, pBinaryBrightness;//, pBinaryColor;
     vector<Armor> armors;
 
 #if PICTURE_MODE == 1
@@ -38,7 +59,7 @@ int main(int argc, char **argv) {
     if (argc == 2) {
         cap.open(argv[1]);
     } else {
-        cap.open(0);
+        cap.open(2);
     }
     if (!cap.isOpened()) {
         printf("No image data \n");
@@ -48,13 +69,13 @@ int main(int argc, char **argv) {
     cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
     cap.set(CV_CAP_PROP_FPS, 30);
-    cap.set(CV_CAP_PROP_BRIGHTNESS, 0);
-    cap.set(CV_CAP_PROP_CONTRAST, 1);
-    cap.set(CV_CAP_PROP_SATURATION, 1);
-    cap.set(CV_CAP_PROP_HUE, 0);
-    cap.set(CV_CAP_PROP_GAIN, 0);
-    cap.set(CV_CAP_PROP_EXPOSURE, 0.075);
-    cap.set(CV_CAP_PROP_XI_AUTO_WB, 0);
+//    cap.set(CV_CAP_PROP_BRIGHTNESS, 0);
+//    cap.set(CV_CAP_PROP_CONTRAST, 0.5);
+//    cap.set(CV_CAP_PROP_SATURATION, 0.5);
+//    cap.set(CV_CAP_PROP_HUE, 0.5);
+//    cap.set(CV_CAP_PROP_GAIN, 0);
+    cap.set(CV_CAP_PROP_EXPOSURE, 0.3);
+//    cap.set(CV_CAP_PROP_XI_AUTO_WB, 0);
 
     cap >> pSrcImage;
 #endif //if PICTURE_MODE == 1
@@ -62,9 +83,15 @@ int main(int argc, char **argv) {
 #ifndef NDEBUG
     namedWindow("Original Image", WINDOW_AUTOSIZE);
     namedWindow("Contours", CV_WINDOW_AUTOSIZE);
+    namedWindow("Color Points", CV_WINDOW_AUTOSIZE);
     namedWindow("Ellipses", CV_WINDOW_AUTOSIZE);
-//    namedWindow("Point in ellipses", WINDOW_AUTOSIZE);
     namedWindow("Result image", WINDOW_AUTOSIZE);
+
+    setMouseCallback("Original Image", CallBackFunc, NULL);
+    setMouseCallback("Contours", CallBackFunc, NULL);
+    setMouseCallback("Color Points", CallBackFunc, NULL);
+    setMouseCallback("Ellipses", CallBackFunc, NULL);
+    setMouseCallback("Result image", CallBackFunc, NULL);
 
     printf("width = %.2f\n", cap.get(CV_CAP_PROP_FRAME_WIDTH));
     printf("height = %.2f\n", cap.get(CV_CAP_PROP_FRAME_HEIGHT));
@@ -92,46 +119,50 @@ int main(int argc, char **argv) {
     clock_t totalTime = clock();
     long int frameCount = 0;
 
-    while (pSrcImage.data) {
+    Mat lookUpTable(1, 256, CV_8U);
+    uchar *p = lookUpTable.ptr();
+    for (int i = 0; i < 256; ++i)
+        p[i] = saturate_cast<uchar>(pow(i / 255.0, 4) * 255.0);
+
+    for (int tenFrame; pSrcImage.data; tenFrame++) {
         frameCount++;
         clock_t startTime, endTime;
         startTime = clock();
         /// make the image darker to avoid over expose
 //        pSrcImage.convertTo(pDarkImage, -1, 1, -50);
-        //gammaCorrection(pSrcImage, 4, pDarkImage);
-		//gamma correction
 
-		Mat lookUpTable(1, 256, CV_8U);
-		uchar *p = lookUpTable.ptr();
-		for (int i = 0; i < 256; ++i)
-			p[i] = saturate_cast<uchar>(pow(i / 255.0, 4) * 255.0);
-
-		LUT(pSrcImage, lookUpTable, pDarkImage);
+        ///gamma correction
+        LUT(pSrcImage, lookUpTable, pDarkImage);
 
 #ifndef NDEBUG
         imshow("Original Image", pDarkImage);
+        pDarkImage.copyTo(pResultImage);
 #endif
-        /// Picture contours + light points in ellipses
         pContourEllipse = Mat::zeros(pSize, CV_8UC1);
         pContour = Mat::zeros(pSize, CV_8UC1);
-        pBinaryColor = Mat::zeros(pSize, CV_8UC1);
+//        pBinaryColor = Mat::zeros(pSize, CV_8UC1);
         pBinaryBrightness = Mat::zeros(pSize, CV_8UC1);
-        pResultImage = Mat::zeros(pSize, CV_8UC3);
+//        pResultImage = Mat::zeros(pSize, CV_8UC3);
         /// Color difference detection
         vector<Point> colorPoint;
         cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
 
-        inRange(pHSV, Scalar(-1, -1, 149), Scalar(181, 121, 256), pBinaryBrightness);
+        inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
 
-        if (sTargetColor == Scalar(0, 0, 255)) {
-            Mat pBinaryColorLower, pBinaryColorUpper;
-            inRange(pHSV, Scalar(-1, 99, 99), Scalar(11, 256, 256), pBinaryColorLower);
-            inRange(pHSV, Scalar(169, 99, 99), Scalar(181, 256, 256), pBinaryColorUpper);
-            pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
-        } else {
-            inRange(pHSV, Scalar(109, 99, 99), Scalar(131, 256, 256), pBinaryColor);
-        }
+//        if (nTargetColor == TARGET_RED) {
+//            Mat pBinaryColorLower, pBinaryColorUpper;
+//            inRange(pHSV, Scalar(0, 100, 100), Scalar(5, 255, 255), pBinaryColorLower);
+//            inRange(pHSV, Scalar(175, 100, 100), Scalar(179, 255, 255), pBinaryColorUpper);
+//            pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
+//        } else {
+//            inRange(pHSV, Scalar(115, 100, 100), Scalar(125, 255, 255), pBinaryColor);
+//        }
 
+//        pBinaryBrightness = pBinaryBrightness | pBinaryColor;
+
+#ifndef NDEBUG
+        imshow("Color Points", pBinaryBrightness);
+#endif
         /// edge detection
 //        cvtColor(pDarkImage, pGrayImage, COLOR_RGB2GRAY);
         blur(pBinaryBrightness, pMarginImage, Size(3, 3));//use blur to reduce noise
@@ -141,20 +172,26 @@ int main(int argc, char **argv) {
         vector<Vec4i> hierarchy;
         std::vector<std::vector<Point>> contours;
         /// Find contours
-        findContours(pMarginImage, contours, hierarchy, CV_RETR_LIST, CV_CHAIN_APPROX_NONE, Point(0, 0));
+        findContours(pMarginImage, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0));
         /// Find the rotated rectangles and ellipses for each contour
         vector<RotatedRect> minEllipse;
-        vector<RotatedRect> minRect;
 //        unsigned int colorPointSize = colorPoint.size();
         vector<float> brightnessRatio;
         unsigned int size = contours.size();
         for (int i = 0; i < size; i++) {
-            if (contours[i].size() > 5) {
+            unsigned int pointsOnContour = contours[i].size();
+            int red = 0, blue = 0;
+            if (pointsOnContour > 5) {
+                for (int j = 0; j < pointsOnContour; j++) {
+                    int color = pHSV.at<Vec3b>(contours[i][j])[0];
+                    if (color <= 60 || color >= 150) red++;
+                    else blue++;
+                }
+                if ((nTargetColor == TARGET_RED && red < blue) || (nTargetColor == TARGET_BLUE && blue < red)) continue;
                 RotatedRect tmp = fitEllipse(Mat(contours[i]));
                 float heightToWidth = (float) tmp.size.height / tmp.size.width;
-                if ((tmp.angle < 30 || tmp.angle > 150) && tmp.size.height > 3 && tmp.size.width > 3 &&
-                    heightToWidth > 3 && heightToWidth < 9) {
-                    minRect.push_back(minAreaRect(Mat(contours[i])));
+                if ((tmp.angle < 30 || tmp.angle > 150) && tmp.size.width > 3 && heightToWidth > 1.5 &&
+                    heightToWidth < 9) {
                     minEllipse.push_back(tmp);
                 }
             }
@@ -167,10 +204,6 @@ int main(int argc, char **argv) {
         size = minEllipse.size();
         for (int i = 0; i < size; i++) {
             ellipse(pContourEllipse, minEllipse[i], sWhite, 1, 8);
-            Point2f rect_points[4];
-            minRect[i].points(rect_points);
-            for (int j = 0; j < 4; j++)
-                line(pContourEllipse, rect_points[j], rect_points[(j + 1) % 4], sWhite, 1, 8);
             putText(pContourEllipse, to_string(i), minEllipse[i].center, FONT_HERSHEY_SIMPLEX, 1, sWhite);
         }
         for (int i = 0; i < colorPoint.size(); i++) {
@@ -191,9 +224,9 @@ int main(int argc, char **argv) {
                 float widthDifferenceRatio = abs(e1.size.width - e2.size.width) / (e1.size.width + e2.size.width);
                 float xDifferenceRatio = abs(e1.center.x - e2.center.x) / (e1.size.height + e2.size.height);
                 float yDifferenceRatio = abs(e1.center.y - e2.center.y) / (e1.size.height + e2.size.height);
-                if ((angleDifference < 10 || angleDifference > 170) && heightDifferenceRatio < 0.1 &&
+                if ((angleDifference < 5 || angleDifference > 175) && heightDifferenceRatio < 0.1 &&
                     xDifferenceRatio > 0.5 &&
-                    xDifferenceRatio < 3 && yDifferenceRatio < 0.5 && widthDifferenceRatio < 0.3) {
+                    xDifferenceRatio < 3 && yDifferenceRatio < 0.3 && widthDifferenceRatio < 0.3) {
                     Armor armor;
                     unsigned int armorsSize = armors.size();
                     if (armorsSize > 0) {
@@ -240,7 +273,10 @@ int main(int argc, char **argv) {
                                                                 upperRight.x * lowerLeft.y)) /
                               ((-upperRight.x + lowerLeft.x) * (upperLeft.y - lowerRight.y) -
                                (-upperLeft.x + lowerRight.x) * (upperRight.y - lowerLeft.y));
-                    armor.distance = 250.0 / (e1.size.height + e2.size.height);
+                    armor.distance = 275.0 / (e1.size.height + e2.size.height);
+
+
+
                     armors.push_back(armor);
 #ifndef NDEBUG
                     ellipse(pResultImage, e1, sWhite);
@@ -284,7 +320,8 @@ int main(int argc, char **argv) {
     }
 
 #ifndef NDEBUG
-    cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << endl;
+    cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << ", FPS:"
+         << frameCount / (double) (clock() - totalTime) * CLOCKS_PER_SEC << endl;
 #endif
 
 #if PICTURE_MODE == 0

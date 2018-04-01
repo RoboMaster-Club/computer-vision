@@ -422,7 +422,7 @@ int main(int argc, char **argv) {
             cap >> pSrcImage;
     }
 
-    cout << "average time: " << (double)(clock() - totalTime) / CLOCKS_PER_SEC / frameCount << endl;
+    cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << endl;
 
 #if PICTURE_MODE == 0
     cap.release();
