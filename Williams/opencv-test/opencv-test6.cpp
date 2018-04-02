@@ -53,9 +53,8 @@ int main(int argc, char **argv) {
     } else {
         sTargetColor = Scalar(0, 0, 255);
     }
-    Mat pSrcImage, pDstImage, pGrayImage, pDarkImage, pMarginImage, pResultImage, pContourEllipse, pContour, pBinaryBrightness, pBinaryColor;
+    Mat pSrcImage, pDstImage, pGrayImage, pDarkImage, pMarginImage, pResultImage, pContourEllipse, pContour, pBinaryBrightness;//, pBinaryColor;
     vector<Armor> armors;
-    vector<SearchArea> searchAreas;
 
 #if PICTURE_MODE == 1
     pSrcImage = imread(argv[1], 1);
@@ -139,23 +138,14 @@ int main(int argc, char **argv) {
 #endif
         pContourEllipse = Mat::zeros(pSize, CV_8UC1);
         pContour = Mat::zeros(pSize, CV_8UC1);
-        pBinaryColor = Mat::zeros(pSize, CV_8UC1);
+//        pBinaryColor = Mat::zeros(pSize, CV_8UC1);
         pBinaryBrightness = Mat::zeros(pSize, CV_8UC1);
-
+//        pResultImage = Mat::zeros(pSize, CV_8UC3);
+        /// Color difference detection
+        vector<Point> colorPoint;
         cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
 
         inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
-        if (nTargetColor == TARGET_RED) {
-            Mat pBinaryColorLower, pBinaryColorUpper;
-            inRange(pHSV, Scalar(0, 100, 100), Scalar(5, 255, 255), pBinaryColorLower);
-            inRange(pHSV, Scalar(175, 100, 100), Scalar(179, 255, 255), pBinaryColorUpper);
-            pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
-        } else {
-            inRange(pHSV, Scalar(115, 100, 100), Scalar(125, 255, 255), pBinaryColor);
-        }
-
-        pBinaryBrightness = pBinaryBrightness | pBinaryColor;
-
 
 #ifndef NDEBUG
         imshow("Color Points", pBinaryBrightness);
@@ -203,6 +193,9 @@ int main(int argc, char **argv) {
             ellipse(pContourEllipse, minEllipse[i], sWhite, 1, 8);
             putText(pContourEllipse, to_string(i), minEllipse[i].center, FONT_HERSHEY_SIMPLEX, 1, sWhite);
         }
+        for (int i = 0; i < colorPoint.size(); i++) {
+            circle(pContourEllipse, colorPoint[i], 1, sWhite);
+        }
         imshow("Ellipses", pContourEllipse);
 #endif
 
@@ -233,8 +226,6 @@ int main(int argc, char **argv) {
                         e1 = e2;
                         e2 = tmp;
                     }
-                    armor.width = e2.center.x - e1.center.x;
-                    armor.height = e1.size.height + e2.size.height;
                     float angle1 = e1.angle * PI / 180;
                     float angle2 = e2.angle * PI / 180;
                     float sin1 = sin(angle1), sin2 = sin(angle2), cos1 = cos(angle1), cos2 = cos(angle2);
@@ -270,13 +261,7 @@ int main(int argc, char **argv) {
                               ((-upperRight.x + lowerLeft.x) * (upperLeft.y - lowerRight.y) -
                                (-upperLeft.x + lowerRight.x) * (upperRight.y - lowerLeft.y));
                     armor.z = 275.0 / (e1.size.height + e2.size.height);
-
-                    SearchArea sa;
-                    sa.id = armor.id;
-                    sa.rect = Rect(armor.x - armor.width * 3 / 2, armor.y - armor.height * 3 / 2, armor.width * 3, armor.height * 3);
-
                     armors.push_back(armor);
-                    searchAreas.push_back(sa);
 #ifndef NDEBUG
                     ellipse(pResultImage, e1, sWhite);
                     ellipse(pResultImage, e2, sWhite);
@@ -287,14 +272,14 @@ int main(int argc, char **argv) {
                     Point center = Point(armor.x, armor.y);
                     circle(pResultImage, center, 4, sTargetColor);
 
-                    rectangle(pResultImage, sa.rect, sTargetColor);
-
                     putText(pResultImage, to_string(armor.z) + " m", center, FONT_HERSHEY_SIMPLEX, 1,
                             sTargetColor, 2);
 #endif
                 }
             }
         }
+
+
 
 
 #ifndef NDEBUG
