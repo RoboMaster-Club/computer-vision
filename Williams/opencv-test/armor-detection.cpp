@@ -32,6 +32,8 @@ Mat lookUpTable(1, 256, CV_8U);
 int nTargetColor = 2;
 const int TARGET_RED = 2;
 const int TARGET_BLUE = 0;
+int height = 0;
+int width = 0;
 
 #ifndef NDEBUG
 const Scalar sWhite = Scalar(255, 255, 255);
@@ -216,9 +218,15 @@ void getSearchArea(const vector<Armor> &armors, vector<SearchArea> &searchAreas)
     for (int i = 0; i < size; i++) {
         Armor curArmor = armors[i];
         searchAreas[i].id = armors[i].id;
-        searchAreas[i].rect = Rect(curArmor.x - curArmor.width * 3 / 2 + curArmor.angular_velocity_x,
-                                   curArmor.y - curArmor.height * 3 / 2 + curArmor.angular_velocity_y,
-                                   curArmor.width * 3, curArmor.height * 3);
+        float x = curArmor.x - curArmor.width * 3 / 2 + curArmor.angular_velocity_x;
+        x = x > 0 ? x : 0;
+        float y = curArmor.y - curArmor.height * 3 / 2 + curArmor.angular_velocity_y;
+        y = y > 0 ? y : 0;
+        float saWidth = curArmor.width * 3;
+        saWidth = x + saWidth > width ? width - x : saWidth;
+        float saHeight = curArmor.height * 3;
+        saHeight = y + saHeight > height ? height - y : saHeight;
+        searchAreas[i].rect = Rect(x, y, saWidth, saHeight);
     }
 }
 
@@ -287,8 +295,8 @@ int main(int argc, char **argv) {
     vector<SearchArea> searchAreas;
     Size pSize = pSrcImage.size();
     int type = pSrcImage.type();
-    int height = pSrcImage.rows;
-    int width = pSrcImage.cols;
+    height = pSrcImage.rows;
+    width = pSrcImage.cols;
 
     clock_t totalTime = clock();
     long int frameCount = 0;
@@ -352,7 +360,8 @@ int main(int argc, char **argv) {
             putText(pResultImage, "vy: " + to_string(armors[i].angular_velocity_y) + " p/f",
                     Point(armors[i].x, armors[i].y + 50), FONT_HERSHEY_SIMPLEX,
                     1, sTargetColor, 2);
-            putText(pResultImage, "vz: " + to_string(armors[i].velocity_z) + " m/s", Point(armors[i].x, armors[i].y + 75),
+            putText(pResultImage, "vz: " + to_string(armors[i].velocity_z) + " m/s",
+                    Point(armors[i].x, armors[i].y + 75),
                     FONT_HERSHEY_SIMPLEX,
                     1, sTargetColor, 2);
         }
@@ -377,11 +386,8 @@ int main(int argc, char **argv) {
         endTime = clock();
         cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
     }
-
-#ifndef NDEBUG
     cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << ", FPS:"
          << frameCount / (double) (clock() - totalTime) * CLOCKS_PER_SEC << endl;
-#endif
 
 #if PICTURE_MODE == 0
     cap.release();
