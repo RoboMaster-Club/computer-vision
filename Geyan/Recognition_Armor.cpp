@@ -1,122 +1,120 @@
 #include <iostream>
-#include <cv.h>
-#include <highgui.h>
-#include <cxcore.h>
+#include <opencv2/opencv.hpp>
+#include <vector>
 #include <omp.h>
-#define T_ANGLE_THRE 10
-#define T_SIZE_THRE 5
 using namespace cv;
 using namespace std;
-void brightAdjust(IplImage* src, IplImage* dst, double contrast, double bright) {
-	unsigned char* srcData = (unsigned char*)src->imageData, *dstData = (unsigned char*)dst->imageData;
-	int tmpVal, step = src->widthStep / sizeof(unsigned char) / 3;
-	omp_set_num_threads(8);
-	for (int i = 0; i<src->height; ++i)
-		for (int j = 0; j <src->width; ++j)
-			for (int k = 0; k < 3; ++k) {
-				tmpVal = (int)(contrast * srcData[(i*step + j) * 3 + k] + bright);
-				tmpVal = (tmpVal < 0) ? 0 : (tmpVal > 255) ? 255 : tmpVal;
-				dstData[(i*step + j) * 3 + k] = tmpVal;
-			}
+#define THREADS 4
+#define ANGLE_THRE 10
+#define H_RATIO 10
+#define PI 3.14159265358979
+#define PATH "E:\\Purdue\\VS\\C++\\Dji-RM\\testVideo\\5-1.mp4"
+#define bRED true
+#if bRED
+#define COLOR Scalar(0,0,255)
+#else
+#define COLOR Scalar(255,0,0)
+#endif
+Mat clrRng(1, 256, CV_8U);
+float tmpD = -1;
+typedef struct Armor {
+	int id;
+	float w, h;
+	double dx, dy, d, v;
+} Armor;
+Mat Proc(Mat srcImg, Mat &dstImg, Mat & HSV) {
+	Mat Ctr, Brt, Clr, lClr, rClr;
+	uchar *c = clrRng.ptr();
+	for (int i = 0; i < 256; c[i] = saturate_cast<uchar>(pow(i++ / 255.0, 4) * 255.0));
+	LUT(srcImg, clrRng, dstImg);
+	Clr = Brt = Mat::zeros(srcImg.size(), CV_8UC1);
+	cvtColor(dstImg, HSV, COLOR_BGR2HSV);
+	inRange(HSV, Scalar(0, 0, 200), Scalar(200, 200, 255), Brt);
+	if (bRED) {
+		inRange(HSV, Scalar(0, 100, 100), Scalar(10, 255, 255), lClr);
+		inRange(HSV, Scalar(170, 100, 100), Scalar(180, 255, 255), rClr);
+		Clr = lClr | rClr;
+	}
+	else inRange(HSV, Scalar(120, 100, 100), Scalar(140, 255, 255), Clr);
+	blur((Brt |= Clr), Ctr, Size(3, 3));
+	Canny(Ctr, Ctr, 100, 200);
+	return Ctr;
 }
-void getDiffImg(IplImage* src1, IplImage* src2, IplImage* dst, int Thre) {
-	unsigned char *srcData1 = (unsigned char*)src1->imageData, *srcData2 = (unsigned char*)src2->imageData, *dstData = (unsigned char*)dst->imageData;
-	int step = src1->widthStep / sizeof(unsigned char);
-	omp_set_num_threads(8);
-	for (int i = 0; i < src1->height; ++i)
-		for (int j = 0; j < src1->width; ++j)
-			dstData[i*step + j] = (srcData1[i*step + j] - srcData2[i*step + j] > Thre) ? 255 : 0;
+void Draw(Mat Img, Point *pt, Armor armor) {
+	line(Img, pt[0], pt[2], COLOR, 2, 8, 0);
+	line(Img, pt[2], pt[3], COLOR, 2, 8, 0);
+	line(Img, pt[3], pt[1], COLOR, 2, 8, 0);
+	line(Img, pt[1], pt[0], COLOR, 2, 8, 0);
+	putText(Img, "v: " + to_string(armor.v), Point(armor.dx, armor.dy + 40), FONT_ITALIC, 1, COLOR, 2);
+	putText(Img, "d: " + to_string(armor.d), Point(armor.dx, armor.dy - 40), FONT_ITALIC, 1, COLOR, 2);
 }
-vector<CvBox2D> armorDetect(vector<CvBox2D> ellipse) {
-	vector<CvBox2D> rlt;
-	CvBox2D armor;
-	int m, n;
-	double angle;
-	rlt.clear();
-	if (ellipse.size() < 2) return rlt;
-	for (unsigned int i = 0; i < ellipse.size() - 1; ++i)
-		for (unsigned int j = i + 1; j < ellipse.size(); ++j) {
-			angle = abs(ellipse[i].angle - ellipse[j].angle);
-			for (; angle > 180; angle -= 180);
-			if ((angle < T_ANGLE_THRE || 180 - angle < T_ANGLE_THRE) && abs(ellipse[i].size.height - ellipse[j].size.height) < (ellipse[i].size.height + ellipse[j].size.height) / T_SIZE_THRE && abs(ellipse[i].size.width - ellipse[j].size.width) < (ellipse[i].size.width + ellipse[j].size.width) / T_SIZE_THRE) {
-				armor.center.x = (ellipse[i].center.x + ellipse[j].center.x) / 2;
-				armor.center.y = (ellipse[i].center.y + ellipse[j].center.y) / 2;
-				armor.angle = (ellipse[i].angle + ellipse[j].angle) / 2;
-				armor.angle += (180 - angle < T_ANGLE_THRE) ? 90 : 0;
-				m = (ellipse[i].size.height + ellipse[j].size.height) / 2;
-				n = sqrt((ellipse[i].center.x - ellipse[j].center.x) * (ellipse[i].center.x - ellipse[j].center.x) + (ellipse[i].center.y - ellipse[j].center.y) * (ellipse[i].center.y - ellipse[j].center.y));
-				if (m < n) {
-					armor.size.height = m;
-					armor.size.width = n;
+void ArmorDetect(Mat & Img, vector<RotatedRect> ellipses, vector<Armor> & armors) {
+	RotatedRect pre, pos;
+	omp_set_num_threads(THREADS);
+#pragma omp parallel for
+	for (int i = 0; i < ellipses.size() - 1; ++i)
+		for (int j = i + 1; j < ellipses.size(); ++j) {
+			pre = ellipses[i];
+			pos = ellipses[j];
+			if ((abs(pre.angle - pos.angle) < ANGLE_THRE || 180 - abs(pre.angle - pos.angle) < ANGLE_THRE) && abs(pre.size.height - pos.size.height) / (pre.size.height + pos.size.height) < 0.05 && abs(pre.size.width - pos.size.width) / (pre.size.width + pos.size.width) < 0.05 && abs(pre.center.x - pos.center.x) / (pre.size.height + pos.size.height) > 0.5 && abs(pre.center.x - pos.center.x) / (pre.size.height + pos.size.height) < 3 && abs(pre.center.y - pos.center.y) / (pre.size.height + pos.size.height) < 0.3) {
+				Armor armor;
+				if (armors.size() > 0) armor.id = armors[armors.size() - 1].id + 1;
+				else armor.id = -1;
+				if (pre.center.x > pos.center.x) swap(pre, pos);
+				armor.w = pos.center.x - pre.center.x;
+				armor.h = pre.size.height + pos.size.height;
+				armor.d = 300 / (pre.size.height + pos.size.height);
+				if (tmpD < 0) tmpD = armor.d;
+				Point pt[4];
+				pt[0] = Point(pre.center.x - sin(pre.angle * PI / 180) * pre.size.height, pre.center.y + cos(pre.angle * PI / 180) * pre.size.height);
+				pt[1] = Point(pre.center.x + sin(pre.angle * PI / 180) * pre.size.height, pre.center.y - cos(pre.angle * PI / 180) * pre.size.height);
+				pt[2] = Point(pos.center.x - sin(pos.angle * PI / 180) * pos.size.height, pos.center.y + cos(pos.angle * PI / 180) * pos.size.height);
+				pt[3] = Point(pos.center.x + sin(pos.angle * PI / 180) * pos.size.height, pos.center.y - cos(pos.angle * PI / 180) * pos.size.height);
+				if (pt[0].y > pt[1].y) swap(pt[0], pt[1]);
+				if (pt[2].y > pt[3].y) swap(pt[2], pt[3]);
+				for (int k = 0; k < 4; ++k) {
+					armor.dx += pt[i].x / 4;
+					armor.dy += pt[i].y / 4;
 				}
-				else {
-					armor.size.height = n;
-					armor.size.width = m;
-				}
-				rlt.push_back(armor);
+				if (armor.dx > 4000 || armor.dx < 1 || armor.dy>2000 || armor.dy < 1) continue;
+				//if(armors.size()>1)
+				armor.v = armor.d - tmpD;
+				printf("X: %f; Y: %f; D: %f; V: %f, preD: %f, curD: %f\n", armor.dx, armor.dy, armor.d, armor.v, tmpD, armor.d);
+				armors.push_back(armor);
+				tmpD = armor.d;
+				Draw(Img, pt, armor);
 			}
 		}
-	return rlt;
 }
-void draw(CvBox2D box, IplImage* img) {
-	CvPoint2D32f point[4];
-	int i;
-	for (i = 0; i<4; ++i) {
-		point[i].x = 0;
-		point[i].y = 0;
-	}
-	cvBoxPoints(box, point);
-	CvPoint pt[4];
-	for (i = 0; i<4; ++i) {
-		pt[i].x = (int)point[i].x;
-		pt[i].y = (int)point[i].y;
-	}
-	cvLine(img, pt[0], pt[1], CV_RGB(0, 255, 0), 2, 8, 0);
-	cvLine(img, pt[1], pt[2], CV_RGB(0, 255, 0), 2, 8, 0);
-	cvLine(img, pt[2], pt[3], CV_RGB(0, 255, 0), 2, 8, 0);
-	cvLine(img, pt[3], pt[0], CV_RGB(0, 255, 0), 2, 8, 0);
-}
-int main() {
-	CvCapture *cap = cvCreateFileCapture("E:\\Purdue\\Fuck 3.8\\Robo\\RedCar.avi");
-	IplImage *frame = NULL;
-	CvSize imgSize;
-	CvBox2D s;
-	vector<CvBox2D> ellipse, rlt, armor;
-	CvScalar sl;
-	bool flag = false;
-	CvSeq *contour = NULL, *lines = NULL;
-	CvMemStorage *storage = cvCreateMemStorage(0);
-	frame = cvQueryFrame(cap);
-	imgSize = cvGetSize(frame);
-	IplImage *rawImg = cvCreateImage(imgSize, IPL_DEPTH_8U, 3), *grayImg = cvCreateImage(imgSize, IPL_DEPTH_8U, 1), *rImg = cvCreateImage(imgSize, IPL_DEPTH_8U, 1), *gImg = cvCreateImage(imgSize, IPL_DEPTH_8U, 1), *bImg = cvCreateImage(imgSize, IPL_DEPTH_8U, 1), *binImg = cvCreateImage(imgSize, IPL_DEPTH_8U, 1), *rltImg = cvCreateImage(imgSize, IPL_DEPTH_8U, 1);
-	while (frame) {
-		brightAdjust(frame, rawImg, 1, -120);
-		cvSplit(rawImg, bImg, gImg, rImg, 0);
-		getDiffImg(rImg, gImg, binImg, 25);
-		cvDilate(binImg, grayImg, NULL, 3);
-		cvErode(grayImg, rltImg, NULL, 1);
-		cvFindContours(rltImg, storage, &contour, sizeof(CvContour), CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
-		for (; contour != NULL; contour = contour->h_next)
-			if (contour->total > 10) {
-				flag = true;
-				s = cvFitEllipse2(contour);
-				for (int i = 0; i < 5; ++i)
-					for (int j = 0; j < 5; ++j)
-						if (s.center.y - 2 + j > 0 && s.center.y - 2 + j < 480 && s.center.x - 2 + i > 0 && s.center.x - 2 + i <  640) {
-							sl = cvGet2D(frame, (int)(s.center.y - 2 + j), (int)(s.center.x - 2 + i));
-							flag = (sl.val[0] < 200 || sl.val[1] < 200 || sl.val[2] < 200) ? false : true;
-						}
-				if (flag) ellipse.push_back(s);
+int main(int argc, char **argv) {
+	Mat srcImg, dstImg, HSV;
+	VideoCapture cap = VideoCapture(PATH);
+	//cap.open(2);
+	cap >> srcImg;
+	while (srcImg.data) {
+		vector<Vec4i> tmp4I;
+		vector<vector<Point>> tmpCtr;
+		findContours(Proc(srcImg, dstImg, HSV), tmpCtr, tmp4I, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+		vector<RotatedRect> Elp;
+		omp_set_num_threads(THREADS);
+#pragma omp parallel for
+		for (int i = 0; i < tmpCtr.size(); ++i) {
+			int red = 0, blue = 0;
+			if (tmpCtr[i].size() >= 5) {
+				for (int j = 0; j < tmpCtr[i].size(); ++j)
+					if (HSV.at<Vec3b>(tmpCtr[i][j])[0] <= 60) ++red;
+					else if (HSV.at<Vec3b>(tmpCtr[i][j])[0] >= 180 && HSV.at<Vec3b>(tmpCtr[i][j])[0] <= 240) ++blue;
+					if ((bRED && red <= blue) || (!bRED && blue <= red)) continue;
+					RotatedRect tmp = fitEllipse((tmpCtr[i]));
+					float hw = tmp.size.height / tmp.size.width;
+					if ((tmp.angle < ANGLE_THRE || 180 - tmp.angle < ANGLE_THRE) && hw > 2 && hw < 4) Elp.push_back(tmp);
 			}
-		rlt = armorDetect(ellipse);
-		for (unsigned int i = 0; i < rlt.size(); draw(rlt[i++], frame));
-		cvShowImage("armor", frame);
-		if (cvWaitKey(20) == 10) break;
-		frame = cvQueryFrame(cap);
-		armor.clear();
-		ellipse.clear();
-		rlt.clear();
+		}
+		vector<Armor> armors;
+		ArmorDetect(dstImg, Elp, armors);
+		namedWindow("Result image", WINDOW_AUTOSIZE);
+		imshow("Result image", dstImg);
+		if (waitKey(20) == 10) break;
+		cap >> srcImg;
 	}
-	cvReleaseCapture(&cap);
-	return 0;
 }
