@@ -6,6 +6,68 @@
 using namespace cv;
 using namespace std;
 
+class Settings {
+
+public:
+    string input;
+    string fileName;
+    int cameraID;
+    int width;
+    int height;
+    int fps;
+    float viewingAngleX;
+    float viewingAngleY;
+    float zCoefficient;
+    int brightness;
+    float contrast;
+    float saturation;
+    float hue;
+    float gain;
+    float exposure;
+    bool isFishEye;
+
+    void write(FileStorage &fs) const {
+        fs << "input" << input
+           << "width" << width
+           << "height" << height
+           << "fps" << fps
+           << "viewing_angle_x" << viewingAngleX
+           << "viewing_angle_y" << viewingAngleY
+           << "z_coefficient" << zCoefficient
+           << "brightness" << brightness
+           << "contrast" << contrast
+           << "saturation" << saturation
+           << "hue" << hue
+           << "gain" << gain
+           << "exposure" << exposure
+           << "is_fisheye" << isFishEye;
+    }
+
+    void read(const FileStorage &fs) {
+        fs["input"] >> input;
+        fs["width"] >> width;
+        fs["height"] >> height;
+        fs["fps"] >> fps;
+        fs["viewing_angle_x"] >> viewingAngleX;
+        fs["viewing_angle_y"] >> viewingAngleY;
+        fs["z_coefficient"] >> zCoefficient;
+        fs["brightness"] >> brightness;
+        fs["contrast"] >> contrast;
+        fs["saturation"] >> saturation;
+        fs["hue"] >> hue;
+        fs["gain"] >> gain;
+        fs["exposure"] >> exposure;
+        fs["is_fisheye"] >> isFishEye;
+
+        if (input[0] >= '0' && input[0] <= '9' && input.size() == 1) {
+            cameraID = input[0] - '0';
+        } else {
+            fileName = input;
+            cameraID = -1;
+        }
+    }
+};
+
 typedef struct _Armor {
     int id;
     float width;
@@ -13,10 +75,10 @@ typedef struct _Armor {
     float x;
     float y;
     float z; //distance
-    float angular_velocity_x;
+    float internal_velocity_x;//pixels per frame
+    float internal_velocity_y;
+    float angular_velocity_x;//rad/s
     float angular_velocity_y;
-    float velocity_x;
-    float velocity_y;
     float velocity_z;
 } Armor;
 
@@ -28,7 +90,6 @@ typedef struct _SearchArea {
 #define PICTURE_MODE 0
 
 //Mat pHSV;
-Mat lookUpTable(1, 256, CV_8U);
 int nTargetColor = 2;
 const int TARGET_RED = 2;
 const int TARGET_BLUE = 0;
@@ -49,8 +110,9 @@ void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
 #endif
 
 
-bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors) {
-    Mat pDarkImage, pMarginImage, pBinaryBrightness, pHSV;//, pBinaryColor;
+bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
+            const Mat &lookUpTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
+    Mat pDarkImage, pBinaryBrightness, pHSV, pBinaryColor;
     Size pSize = curSearchArea.rect.size();
     vector<Armor> resultArmors;
 
@@ -63,15 +125,26 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
     cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
     inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
 
+    if (nTargetColor == TARGET_RED) {
+        Mat pBinaryColorLower, pBinaryColorUpper;
+        inRange(pHSV, Scalar(0, 150, 100), Scalar(5, 255, 255), pBinaryColorLower);
+        inRange(pHSV, Scalar(175, 150, 100), Scalar(179, 255, 255), pBinaryColorUpper);
+        pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
+    } else {
+        inRange(pHSV, Scalar(115, 150, 100), Scalar(125, 255, 255), pBinaryColor);
+    }
+
+    pBinaryBrightness = pBinaryBrightness | pBinaryColor;
+
     /// edge detection
-    blur(pBinaryBrightness, pMarginImage, Size(3, 3));//use blur to reduce noise
-    Canny(pMarginImage, pMarginImage, 100, 200);
+//    blur(pBinaryBrightness, pBinaryBrightness, Size(3, 3));//use blur to reduce noise
+    Canny(pBinaryBrightness, pBinaryBrightness, 100, 200);
 
     /// Margin detection and ellipse fitting
     vector<Vec4i> hierarchy;
     std::vector<std::vector<Point>> contours;
     /// Find contours
-    findContours(pMarginImage, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0));
+    findContours(pBinaryBrightness, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0));
     vector<RotatedRect> minEllipse;
 //        unsigned int colorPointSize = colorPoint.size();
     /// Fit & filter ellipses
@@ -160,15 +233,17 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
                                                                                           upperRight.x * lowerLeft.y)) /
                                                          ((-upperRight.x + lowerLeft.x) * (upperLeft.y - lowerRight.y) -
                                                           (-upperLeft.x + lowerRight.x) * (upperRight.y - lowerLeft.y));
-                tmpArmor.z = (float) 275 / (e1.size.height + e2.size.height);
+                tmpArmor.z = zCoefficient / (e1.size.height + e2.size.height);
 
                 if (referenceArmor != NULL) {
-                    tmpArmor.angular_velocity_x = tmpArmor.x - referenceArmor->x;
-                    tmpArmor.angular_velocity_y = tmpArmor.y - referenceArmor->y;
-                    tmpArmor.velocity_z = (tmpArmor.z - referenceArmor->z);
+                    tmpArmor.internal_velocity_x = tmpArmor.x - referenceArmor->x;
+                    tmpArmor.internal_velocity_y = tmpArmor.y - referenceArmor->y;
+                    tmpArmor.velocity_z = tmpArmor.z - referenceArmor->z;
+                    tmpArmor.angular_velocity_x = tmpArmor.internal_velocity_x * xCoefficient;
+                    tmpArmor.angular_velocity_y = tmpArmor.internal_velocity_y * yCoefficient;
                 } else {
-                    tmpArmor.angular_velocity_y = 0;
-                    tmpArmor.angular_velocity_x = 0;
+                    tmpArmor.internal_velocity_y = 0;
+                    tmpArmor.internal_velocity_x = 0;
                     tmpArmor.velocity_z = 0;
                 }
                 resultArmors.push_back(tmpArmor);
@@ -182,9 +257,11 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
     return true;
 }
 
-bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor &referenceArmor, Armor &armor) {
+bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor &referenceArmor, Armor &armor,
+            const Mat &lookupTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
     vector<Armor> armors;
-    bool found = detect(pSrcImage, curSearchArea, &referenceArmor, armors);
+    bool found = detect(pSrcImage, curSearchArea, &referenceArmor, armors, lookupTable, xCoefficient, yCoefficient,
+                        zCoefficient);
     if (!found) return false;
     unsigned int armorsCount = (unsigned int) armors.size();
     if (armorsCount > 1) {
@@ -218,14 +295,15 @@ void getSearchArea(const vector<Armor> &armors, vector<SearchArea> &searchAreas)
     for (int i = 0; i < size; i++) {
         Armor curArmor = armors[i];
         searchAreas[i].id = armors[i].id;
-        float x = curArmor.x - curArmor.width * 3 / 2 + curArmor.angular_velocity_x;
+        float x = curArmor.x - curArmor.width + curArmor.internal_velocity_x;
         x = x > 0 ? x : 0;
-        float y = curArmor.y - curArmor.height * 3 / 2 + curArmor.angular_velocity_y;
+        float y = curArmor.y - curArmor.height + curArmor.internal_velocity_y;
         y = y > 0 ? y : 0;
-        float saWidth = curArmor.width * 3;
+        float saWidth = curArmor.width * 2;
         saWidth = x + saWidth > width ? width - x : saWidth;
-        float saHeight = curArmor.height * 3;
+        float saHeight = curArmor.height * 2;
         saHeight = y + saHeight > height ? height - y : saHeight;
+        searchAreas[i].id = armors[i].id;
         searchAreas[i].rect = Rect(x, y, saWidth, saHeight);
     }
 }
@@ -234,31 +312,30 @@ int main(int argc, char **argv) {
 
     Mat pSrcImage;
 
+    FileStorage fs("config.xml", FileStorage::READ);
+    Settings settings;
+    settings.read(fs);
 #if PICTURE_MODE == 1
     pSrcImage = imread(argv[1], 1);
 #else
     VideoCapture cap;
-    if (argc == 2) {
-        cap.open(argv[1]);
+
+    if (settings.cameraID != -1) {
+        cap.open(settings.cameraID);
     } else {
-        cap.open(2);
-    }
-    if (!cap.isOpened()) {
-        printf("No image data \n");
-        return -1;
+        cap.open(settings.fileName);
     }
 
     /// Camera setup
-    cap.set(CV_CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(CV_CAP_PROP_FRAME_HEIGHT, 480);
-    cap.set(CV_CAP_PROP_FPS, 30);
-//    cap.set(CV_CAP_PROP_BRIGHTNESS, 0);
-//    cap.set(CV_CAP_PROP_CONTRAST, 0.5);
-//    cap.set(CV_CAP_PROP_SATURATION, 0.5);
-//    cap.set(CV_CAP_PROP_HUE, 0.5);
-//    cap.set(CV_CAP_PROP_GAIN, 0);
-    cap.set(CV_CAP_PROP_EXPOSURE, 0.3);
-//    cap.set(CV_CAP_PROP_XI_AUTO_WB, 0);
+    cap.set(CV_CAP_PROP_FRAME_WIDTH, settings.width);
+    cap.set(CV_CAP_PROP_FRAME_HEIGHT, settings.height);
+    cap.set(CV_CAP_PROP_FPS, settings.fps);
+    cap.set(CV_CAP_PROP_BRIGHTNESS, settings.brightness);
+    cap.set(CV_CAP_PROP_CONTRAST, settings.contrast);
+    cap.set(CV_CAP_PROP_SATURATION, settings.saturation);
+    cap.set(CV_CAP_PROP_HUE, settings.hue);
+    cap.set(CV_CAP_PROP_GAIN, settings.hue);
+    cap.set(CV_CAP_PROP_EXPOSURE, settings.exposure);
 
     cap >> pSrcImage;
 #endif //if PICTURE_MODE == 1
@@ -273,10 +350,7 @@ int main(int argc, char **argv) {
         sTargetColor = Scalar(0, 0, 255);
     }
 
-    namedWindow("Original Image", WINDOW_AUTOSIZE);
     namedWindow("Result image", WINDOW_AUTOSIZE);
-
-    setMouseCallback("Original Image", CallBackFunc, NULL);
     setMouseCallback("Result image", CallBackFunc, NULL);
 
     printf("width = %.2f\n", cap.get(CV_CAP_PROP_FRAME_WIDTH));
@@ -301,7 +375,12 @@ int main(int argc, char **argv) {
     clock_t totalTime = clock();
     long int frameCount = 0;
 
+    Mat lookUpTable(1, 256, CV_8U);
     uchar *p = lookUpTable.ptr();
+
+
+    float xCoefficient = settings.viewingAngleX / width * settings.fps;
+    float yCoefficient = settings.viewingAngleY / height * settings.fps;
 
     SearchArea frame;
     frame.id = 0;
@@ -317,12 +396,14 @@ int main(int argc, char **argv) {
 
         int searchAreaCount = searchAreas.size();
         if (searchAreaCount == 0) {
-            detect(pSrcImage, frame, NULL, armors);
+            detect(pSrcImage, frame, NULL, armors, lookUpTable, xCoefficient, yCoefficient, settings.zCoefficient);
+            tenFrame = 0;
         } else {
             // TODO - Multi-threading
             for (int i = 0; i < searchAreaCount; i++) {
                 Mat subImage(pSrcImage, searchAreas[i].rect);
-                bool found = detect(subImage, searchAreas[i], armors[i], armors[i]);
+                bool found = detect(subImage, searchAreas[i], armors[i], armors[i], lookUpTable, xCoefficient,
+                                    yCoefficient, settings.zCoefficient);
                 if (!found) {
                     armors.erase(armors.begin() + i);
                     searchAreas.erase(searchAreas.begin() + i);
@@ -337,7 +418,7 @@ int main(int argc, char **argv) {
                                               armors[i].width, armors[i].height), Scalar(0, 0, 0), CV_FILLED);
                 }
                 vector<Armor> newArmors;
-                bool found = detect(pSrcImage, frame, NULL, newArmors);
+                bool found = detect(pSrcImage, frame, NULL, newArmors, lookUpTable, xCoefficient, yCoefficient, settings.zCoefficient);
                 if (found)
                     armors.insert(armors.end(), newArmors.begin(), newArmors.end());
                 tenFrame = 0;
@@ -348,22 +429,25 @@ int main(int argc, char **argv) {
 
 
 #ifndef NDEBUG
-        pSrcImage.copyTo(pResultImage);
-        for (int i = 0; i < armors.size(); i++) {
-            circle(pResultImage, Point(armors[i].x, armors[i].y), 5, sTargetColor, CV_FILLED);
-            rectangle(pResultImage, searchAreas[i].rect, sTargetColor, 1);
-            putText(pResultImage, to_string(armors[i].z) + " m", Point(armors[i].x, armors[i].y), FONT_HERSHEY_SIMPLEX,
-                    1, sTargetColor, 2);
-            putText(pResultImage, "vx: " + to_string(armors[i].angular_velocity_x) + " p/f",
-                    Point(armors[i].x, armors[i].y + 25), FONT_HERSHEY_SIMPLEX,
-                    1, sTargetColor, 2);
-            putText(pResultImage, "vy: " + to_string(armors[i].angular_velocity_y) + " p/f",
-                    Point(armors[i].x, armors[i].y + 50), FONT_HERSHEY_SIMPLEX,
-                    1, sTargetColor, 2);
-            putText(pResultImage, "vz: " + to_string(armors[i].velocity_z) + " m/s",
-                    Point(armors[i].x, armors[i].y + 75),
-                    FONT_HERSHEY_SIMPLEX,
-                    1, sTargetColor, 2);
+        if (playVideo) {
+            pSrcImage.copyTo(pResultImage);
+            for (int i = 0; i < armors.size(); i++) {
+                circle(pResultImage, Point(armors[i].x, armors[i].y), 5, sTargetColor, CV_FILLED);
+                rectangle(pResultImage, searchAreas[i].rect, sTargetColor, 1);
+                putText(pResultImage, to_string(armors[i].z) + " m", Point(armors[i].x, armors[i].y),
+                        FONT_HERSHEY_SIMPLEX,
+                        1, sTargetColor, 2);
+                putText(pResultImage, "vx: " + to_string(armors[i].angular_velocity_x) + " rad/s",
+                        Point(armors[i].x, armors[i].y + 25), FONT_HERSHEY_SIMPLEX,
+                        1, sTargetColor, 2);
+                putText(pResultImage, "vy: " + to_string(armors[i].angular_velocity_y) + " rad/s",
+                        Point(armors[i].x, armors[i].y + 50), FONT_HERSHEY_SIMPLEX,
+                        1, sTargetColor, 2);
+                putText(pResultImage, "vz: " + to_string(armors[i].velocity_z) + " m/s",
+                        Point(armors[i].x, armors[i].y + 75),
+                        FONT_HERSHEY_SIMPLEX,
+                        1, sTargetColor, 2);
+            }
         }
         imshow("Result image", pResultImage);
 #if PICTURE_MODE == 0
