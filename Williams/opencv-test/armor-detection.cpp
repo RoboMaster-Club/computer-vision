@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include <opencv2/opencv.hpp>
 
 #define PI 3.14159265358979
@@ -426,6 +427,8 @@ int main(int argc, char **argv) {
         }
         searchAreas.resize(armors.size());
         getSearchArea(armors, searchAreas);
+
+        
 
 
 #ifndef NDEBUG
