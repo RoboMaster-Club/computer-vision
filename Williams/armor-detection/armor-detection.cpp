@@ -1,10 +1,13 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <opencv2/opencv.hpp>
 
 #include "Settings.h"
 #include "SearchArea.h"
 #include "Armor.h"
+#include "i2c-struct.h"
+#include "I2C.h"
 
 using namespace cv;
 using namespace std;
@@ -23,6 +26,10 @@ const Scalar sWhite = Scalar(255, 255, 255);
 Scalar sTargetColor;
 
 #endif
+
+bool compByScore(Armor a1, Armor a2) {
+    return a1.score < a2.score;
+}
 
 
 bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
@@ -310,6 +317,9 @@ int main(int argc, char **argv) {
     frame.id = 0;
     frame.rect = Rect(0, 0, width, height);
 
+    i2c_data_t i2cData;
+    I2C<Armor> i2c("/dev/i2c-1", 0x04);
+
     for (int i = 0; i < 256; ++i)
         p[i] = saturate_cast<uchar>(pow(i / 255.0, 4) * 255.0);
 
@@ -351,6 +361,24 @@ int main(int argc, char **argv) {
                 tenFrame = 0;
             }
         }
+
+        float minScore = 0;
+        Armor* resultArmor = nullptr;
+        auto numArmors = (unsigned int)armors.size();
+        if(numArmors > 1) {
+            for(unsigned int i = 0; i < numArmors; i++) {
+                float score = 0;
+                if(score < minScore) {
+                    minScore = score;
+                    resultArmor = &armors[i];
+                }
+            }
+        } else {
+            resultArmor = &armors[0];
+        }
+
+        i2c.send(*resultArmor);
+
         searchAreas.resize(armors.size());
         getSearchArea(armors, searchAreas);
 

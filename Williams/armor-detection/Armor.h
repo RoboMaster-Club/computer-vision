@@ -7,7 +7,7 @@
 
 #include "SearchArea.h"
 
-class Armor {
+typedef struct _Armor {
 public:
     int id;
     float width;
@@ -20,10 +20,8 @@ public:
     float angular_velocity_x;//rad/s
     float angular_velocity_y;
     float velocity_z;
-
-    float clacScore();
-    SearchArea getSearchArea();
-};
+    float score;
+} Armor;
 
 
 #endif //ARMOR_DETECTION_ARMOR_H
