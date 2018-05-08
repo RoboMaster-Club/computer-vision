@@ -1,7 +1,3 @@
-//
-// Created by why on 5/8/18.
-//
-
 #ifndef ARMOR_DETECTION_ARMOR_H
 #define ARMOR_DETECTION_ARMOR_H
 
@@ -20,7 +16,6 @@ public:
     float angular_velocity_x;//rad/s
     float angular_velocity_y;
     float velocity_z;
-    float score;
 } Armor;
 
 

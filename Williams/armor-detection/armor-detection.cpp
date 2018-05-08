@@ -6,7 +6,6 @@
 #include "Settings.h"
 #include "SearchArea.h"
 #include "Armor.h"
-#include "i2c-struct.h"
 #include "I2C.h"
 
 using namespace cv;
@@ -14,7 +13,6 @@ using namespace std;
 
 #define PICTURE_MODE 0
 
-//Mat pHSV;
 int nTargetColor = 2;
 const int TARGET_RED = 2;
 const int TARGET_BLUE = 0;
@@ -24,13 +22,7 @@ int width = 0;
 #ifndef NDEBUG
 const Scalar sWhite = Scalar(255, 255, 255);
 Scalar sTargetColor;
-
 #endif
-
-bool compByScore(Armor a1, Armor a2) {
-    return a1.score < a2.score;
-}
-
 
 bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
             const Mat &lookUpTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
@@ -68,7 +60,6 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
     /// Find contours
     findContours(pBinaryBrightness, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0));
     vector<RotatedRect> minEllipse;
-//        unsigned int colorPointSize = colorPoint.size();
     /// Fit & filter ellipses
     auto contourSize = (unsigned int) contours.size();
     for (unsigned int i = 0; i < contourSize; i++) {
@@ -309,15 +300,16 @@ int main(int argc, char **argv) {
     Mat lookUpTable(1, 256, CV_8U);
     uchar *p = lookUpTable.ptr();
 
-
     float xCoefficient = settings.viewingAngleX / width * settings.fps;
     float yCoefficient = settings.viewingAngleY / height * settings.fps;
+
+    int midX = settings.width / 2;
+    int midY = settings.height / 2;
 
     SearchArea frame;
     frame.id = 0;
     frame.rect = Rect(0, 0, width, height);
 
-    i2c_data_t i2cData;
     I2C<Armor> i2c("/dev/i2c-1", 0x04);
 
     for (int i = 0; i < 256; ++i)
@@ -354,7 +346,7 @@ int main(int argc, char **argv) {
                               Scalar(0, 0, 0), CV_FILLED);
                 }
                 vector<Armor> newArmors;
-                bool found = detect(pSrcImage, frame, NULL, newArmors, lookUpTable, xCoefficient, yCoefficient,
+                bool found = detect(pSrcImage, frame, nullptr, newArmors, lookUpTable, xCoefficient, yCoefficient,
                                     settings.zCoefficient);
                 if (found)
                     armors.insert(armors.end(), newArmors.begin(), newArmors.end());
@@ -367,7 +359,8 @@ int main(int argc, char **argv) {
         auto numArmors = (unsigned int)armors.size();
         if(numArmors > 1) {
             for(unsigned int i = 0; i < numArmors; i++) {
-                float score = 0;
+                //TODO - score formula
+                float score = abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z + pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) + pow(armors[i].velocity_z, 2); // the smaller the better
                 if(score < minScore) {
                     minScore = score;
                     resultArmor = &armors[i];

@@ -14,13 +14,13 @@ class I2C {
 private:
 	int file;
 public:
-	I2C(char*, int);
+	I2C(const char*, int);
 	~I2C();
 	bool send(const T&);
 	bool request(T&);
 };
 
-template <class T> I2C<T>::I2C(char* filename, int addr) {
+template <class T> I2C<T>::I2C(const char* filename, int addr) {
     if ((file = open(filename,O_RDWR)) < 0) {
         printf("Failed to open the bus.\n");
         /* ERROR HANDLING; you can check errno to see what went wrong */
@@ -40,14 +40,14 @@ template <class T> I2C<T>::~I2C() {
 template <class T> bool I2C<T>::send(const T& data)
 {
   size_t size = sizeof data;
-  int writenSize = write(file, (const unsigned char*)&data, size);
+  size_t writenSize = (size_t)write(file, (const unsigned char*)&data, size);
   return size == writenSize;
 }
 
 template <class T> bool I2C<T>::request(T& data)
 {
   size_t size = sizeof data;
-  int readSize = read(file, (unsigned char*)&data, size);
+  size_t readSize = (size_t)read(file, (unsigned char*)&data, size);
   return readSize == size;
 }
 
