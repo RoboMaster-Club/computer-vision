@@ -87,6 +87,7 @@ int main(int argc, char **argv) {
 
 #ifndef NDEBUG
     namedWindow("Original Image", WINDOW_AUTOSIZE);
+    namedWindow("Gamma Correction", WINDOW_AUTOSIZE);
     namedWindow("Contours", CV_WINDOW_AUTOSIZE);
     namedWindow("Color Points", CV_WINDOW_AUTOSIZE);
     namedWindow("Ellipses", CV_WINDOW_AUTOSIZE);
@@ -124,6 +125,7 @@ int main(int argc, char **argv) {
         p[i] = saturate_cast<uchar>(pow(i / 255.0, 4) * 255.0);
 
     for (int tenFrame; pSrcImage.data; tenFrame++) {
+        armors.clear();
         frameCount++;
         clock_t startTime, endTime;
         startTime = clock();
@@ -134,7 +136,8 @@ int main(int argc, char **argv) {
         LUT(pSrcImage, lookUpTable, pDarkImage);
 
 #ifndef NDEBUG
-        imshow("Original Image", pDarkImage);
+        imshow("Original Image", pSrcImage);
+        imshow("Gamma Correction", pDarkImage);
         pDarkImage.copyTo(pResultImage);
 #endif
         pContourEllipse = Mat::zeros(pSize, CV_8UC1);
@@ -273,7 +276,8 @@ int main(int argc, char **argv) {
 
                     SearchArea sa;
                     sa.id = armor.id;
-                    sa.rect = Rect(armor.x - armor.width * 3 / 2, armor.y - armor.height * 3 / 2, armor.width * 3, armor.height * 3);
+                    sa.rect = Rect(armor.x - armor.width * 3 / 2, armor.y - armor.height * 3 / 2, armor.width * 3,
+                                   armor.height * 3);
 
                     armors.push_back(armor);
                     searchAreas.push_back(sa);
@@ -306,6 +310,8 @@ int main(int argc, char **argv) {
             break;
         else if (c == ' ')
             playVideo = !playVideo;
+        else if (!armors.size())
+            playVideo = false;
         if (playVideo)
             cap >> pSrcImage;
 #else
@@ -318,6 +324,7 @@ int main(int argc, char **argv) {
 
         endTime = clock();
         cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
+        cout << armors.size() << endl;
     }
 
 #ifndef NDEBUG

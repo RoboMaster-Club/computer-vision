@@ -1,11 +1,8 @@
 #ifndef ARMOR_DETECTION_ARMOR_H
 #define ARMOR_DETECTION_ARMOR_H
 
-#include "SearchArea.h"
-
 typedef struct _Armor {
 public:
-    int id;
     float width;
     float height;
     float x;

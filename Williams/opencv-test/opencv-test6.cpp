@@ -123,6 +123,7 @@ int main(int argc, char **argv) {
         p[i] = saturate_cast<uchar>(pow(i / 255.0, 4) * 255.0);
 
     for (int tenFrame; pSrcImage.data; tenFrame++) {
+        armors.clear();
         frameCount++;
         clock_t startTime, endTime;
         startTime = clock();
@@ -145,7 +146,20 @@ int main(int argc, char **argv) {
         vector<Point> colorPoint;
         cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
 
+        Mat pBinaryColor;
+
         inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
+
+        if (nTargetColor == TARGET_RED) {
+            Mat pBinaryColorLower, pBinaryColorUpper;
+            inRange(pHSV, Scalar(0, 200, 200), Scalar(15, 255, 255), pBinaryColorLower);
+            inRange(pHSV, Scalar(165, 200, 200), Scalar(179, 255, 255), pBinaryColorUpper);
+            pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
+        } else {
+            inRange(pHSV, Scalar(105, 200, 200), Scalar(135, 255, 255), pBinaryColor);
+        }
+
+        pBinaryBrightness = pBinaryBrightness | pBinaryColor;
 
 #ifndef NDEBUG
         imshow("Color Points", pBinaryBrightness);
@@ -211,6 +225,9 @@ int main(int argc, char **argv) {
                 float widthDifferenceRatio = abs(e1.size.width - e2.size.width) / (e1.size.width + e2.size.width);
                 float xDifferenceRatio = abs(e1.center.x - e2.center.x) / (e1.size.height + e2.size.height);
                 float yDifferenceRatio = abs(e1.center.y - e2.center.y) / (e1.size.height + e2.size.height);
+                if (i == 4 && j == 6) {
+                    cout << endl;
+                }
                 if ((angleDifference < 5 || angleDifference > 175) && heightDifferenceRatio < 0.1 &&
                     xDifferenceRatio > 0.5 &&
                     xDifferenceRatio < 3 && yDifferenceRatio < 0.3 && widthDifferenceRatio < 0.3) {
@@ -280,8 +297,6 @@ int main(int argc, char **argv) {
         }
 
 
-
-
 #ifndef NDEBUG
         imshow("Result image", pResultImage);
 #if PICTURE_MODE == 0
@@ -291,6 +306,9 @@ int main(int argc, char **argv) {
             break;
         else if (c == ' ')
             playVideo = !playVideo;
+//        else if (!armors.size())
+//            cin.get();
+//            playVideo = false;
         if (playVideo)
             cap >> pSrcImage;
 #else

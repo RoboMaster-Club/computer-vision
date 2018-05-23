@@ -16,19 +16,33 @@ using namespace std;
 int nTargetColor = 2;
 const int TARGET_RED = 2;
 const int TARGET_BLUE = 0;
-int height = 0;
-int width = 0;
 
 #ifndef NDEBUG
 const Scalar sWhite = Scalar(255, 255, 255);
 Scalar sTargetColor;
+
+void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
+    if (event == EVENT_LBUTTONDOWN) {
+        Point p = Point(x, y);
+        cout << ((Mat *) userdata)->at<Vec3b>(p) << endl;
+    }
+}
+
 #endif
 
-bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
+bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
             const Mat &lookUpTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
     Mat pDarkImage, pBinaryBrightness, pHSV, pBinaryColor;
-    Size pSize = curSearchArea.rect.size();
+    Size pSize = curSearchArea.size();
     vector<Armor> resultArmors;
+
+    /// histogram equalization
+//    cvtColor(pSrcImage, pDarkImage, COLOR_BGR2YCrCb);
+//    vector<Mat> channels;
+//    split(pDarkImage, channels);
+//    equalizeHist(channels[0], channels[0]);
+//    merge(channels, pDarkImage);
+//    cvtColor(pDarkImage, pDarkImage, COLOR_YCrCb2BGR);
 
     ///gamma correction
     LUT(pSrcImage, lookUpTable, pDarkImage);
@@ -37,21 +51,26 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
     /// Color difference detection
     vector<Point> colorPoint;
     cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
-    inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
+
+//#ifndef NDEBUG
+//    imshow("dark image", pDarkImage);
+//#endif
+
+//    inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
 
     if (nTargetColor == TARGET_RED) {
         Mat pBinaryColorLower, pBinaryColorUpper;
-        inRange(pHSV, Scalar(0, 150, 100), Scalar(5, 255, 255), pBinaryColorLower);
-        inRange(pHSV, Scalar(175, 150, 100), Scalar(179, 255, 255), pBinaryColorUpper);
+        inRange(pHSV, Scalar(0, 0, 200), Scalar(30, 255, 255), pBinaryColorLower);
+        inRange(pHSV, Scalar(170, 0, 200), Scalar(179, 255, 255), pBinaryColorUpper);
         pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
     } else {
-        inRange(pHSV, Scalar(115, 150, 100), Scalar(125, 255, 255), pBinaryColor);
+        inRange(pHSV, Scalar(80, 0, 200), Scalar(120, 255, 255), pBinaryColor);
     }
 
     pBinaryBrightness = pBinaryBrightness | pBinaryColor;
 
     /// edge detection
-//    blur(pBinaryBrightness, pBinaryBrightness, Size(3, 3));//use blur to reduce noise
+    blur(pBinaryBrightness, pBinaryBrightness, Size(3, 3));//use blur to reduce noise
     Canny(pBinaryBrightness, pBinaryBrightness, 100, 200);
 
     /// Margin detection and ellipse fitting
@@ -77,15 +96,23 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
             if ((tmp.angle < 30 || tmp.angle > 150) && tmp.size.width > 3 && heightToWidth > 1.5 &&
                 heightToWidth < 9) {
                 minEllipse.push_back(tmp);
+#ifndef NDEBUG
+                ellipse(pBinaryBrightness, tmp, Scalar(255,255,255), 1, 8);
+#endif
             }
         }
     }
 
+//#ifndef NDEBUG
+//    imshow("binary color", pBinaryColor);
+//    imshow("binary brightness", pBinaryBrightness);
+//#endif
+
     /// Match ellipses to form armors
-    auto count = (unsigned int) minEllipse.size();
+    auto minEllipseSize = (int) minEllipse.size();
     RotatedRect e1, e2;
-    for (unsigned int i = 0; i < count - 1; i++) {
-        for (unsigned int j = i + 1; j < count; j++) {
+    for (int i = 0; i < minEllipseSize - 1; i++) {
+        for (int j = i + 1; j < minEllipseSize; j++) {
             e1 = minEllipse[i];
             e2 = minEllipse[j];
             float angleDifference = abs(e1.angle - e2.angle);
@@ -93,17 +120,11 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
             float widthDifferenceRatio = abs(e1.size.width - e2.size.width) / (e1.size.width + e2.size.width);
             float xDifferenceRatio = abs(e1.center.x - e2.center.x) / (e1.size.height + e2.size.height);
             float yDifferenceRatio = abs(e1.center.y - e2.center.y) / (e1.size.height + e2.size.height);
-            if ((angleDifference < 5 || angleDifference > 175) && heightDifferenceRatio < 0.1 &&
+            if ((angleDifference < 5 || angleDifference > 175) && heightDifferenceRatio < 0.2 &&
                 xDifferenceRatio > 0.5 &&
-                xDifferenceRatio < 3 && yDifferenceRatio < 0.3 && widthDifferenceRatio < 0.3) {
-                Armor tmpArmor{};
+                xDifferenceRatio < 3 && yDifferenceRatio < 0.3 && widthDifferenceRatio < 0.6) {
+                Armor tmpArmor;
                 auto armorsSize = (unsigned int) armors.size();
-                if (armorsSize > 0) {
-                    tmpArmor.id = armors[armorsSize - 1].id + 1;
-                } else {
-                    tmpArmor.id = 0;
-                }
-                tmpArmor.id = curSearchArea.id;
                 if (e1.center.x > e2.center.x) {
                     RotatedRect tmp = e1;
                     e1 = e2;
@@ -132,7 +153,7 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
                     upperRight = lowerRight;
                     lowerRight = tmp;
                 }
-                tmpArmor.x = curSearchArea.rect.tl().x -
+                tmpArmor.x = curSearchArea.tl().x -
                              (float) (-upperRight.x * lowerRight.x * upperLeft.y +
                                       lowerRight.x * lowerLeft.x * upperLeft.y +
                                       upperLeft.x * lowerLeft.x * upperRight.y -
@@ -144,7 +165,7 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
                              (upperRight.x * upperLeft.y - lowerLeft.x * upperLeft.y - upperLeft.x * upperRight.y +
                               lowerRight.x * upperRight.y - upperRight.x * lowerRight.y + lowerLeft.x * lowerRight.y +
                               upperLeft.x * lowerLeft.y - lowerRight.x * lowerLeft.y);
-                tmpArmor.y = curSearchArea.rect.tl().y -
+                tmpArmor.y = curSearchArea.tl().y -
                              (float) (-(-lowerRight.x * upperLeft.y + upperLeft.x * lowerRight.y) *
                                       (upperRight.y - lowerLeft.y) + (upperLeft.y - lowerRight.y) *
                                                                      (-lowerLeft.x * upperRight.y +
@@ -175,7 +196,7 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor *
     return true;
 }
 
-bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor &referenceArmor, Armor &armor,
+bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor &referenceArmor, Armor &armor,
             const Mat &lookupTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
     vector<Armor> armors;
     bool found = detect(pSrcImage, curSearchArea, &referenceArmor, armors, lookupTable, xCoefficient, yCoefficient,
@@ -200,29 +221,45 @@ bool detect(const Mat &pSrcImage, const SearchArea &curSearchArea, const Armor &
             }
         }
         armor = armors[index];
-        armor.id = curSearchArea.id;
     } else {
         armor = armors[0];
-        armor.id = curSearchArea.id;
     }
     return true;
 }
 
-void getSearchArea(const vector<Armor> &armors, vector<SearchArea> &searchAreas) {
-    auto size = (unsigned int) armors.size();
-    for (unsigned int i = 0; i < size; i++) {
+void getSearchArea(vector<Armor> &armors, vector<Rect> &searchAreas, int width, int height) {
+    auto size = (int) armors.size();
+    for (int i = 0; i < size; i++) {
         Armor curArmor = armors[i];
-        searchAreas[i].id = armors[i].id;
         float x = curArmor.x - curArmor.width + curArmor.internal_velocity_x;
-        x = x > 0 ? x : 0;
         float y = curArmor.y - curArmor.height + curArmor.internal_velocity_y;
-        y = y > 0 ? y : 0;
         float saWidth = curArmor.width * 2;
-        saWidth = x + saWidth > width ? width - x : saWidth;
         float saHeight = curArmor.height * 2;
-        saHeight = y + saHeight > height ? height - y : saHeight;
-        searchAreas[i].id = armors[i].id;
-        searchAreas[i].rect = Rect((int) round(x), (int) round(y), (int) round(saWidth), (int) round(saHeight));
+        if (x + saWidth <= 0 || y + saHeight <= 0 || x >= width || y >= height) {
+            searchAreas.erase(searchAreas.begin() + i);
+            armors.erase(armors.begin() + i);
+            size--;
+            i--;
+            continue;
+        }
+        if (x < 0) {
+            saWidth = saWidth + x;
+            x = 0;
+        }
+        if (x + saWidth > width) {
+            saWidth = width - x;
+        }
+        if (y < 0) {
+            saHeight = saHeight + y;
+            y = 0;
+        }
+        if (y + saHeight > height) {
+            saHeight = height - y;
+        }
+        if(saWidth == -7) {
+            cout << "" ;
+        }
+        searchAreas[i] = Rect((int) round(x), (int) round(y), (int) round(saWidth), (int) round(saHeight));
     }
 }
 
@@ -288,11 +325,9 @@ int main(int argc, char **argv) {
 #endif //ifndef NDEBUG
 
     vector<Armor> armors;
-    vector<SearchArea> searchAreas;
+    vector<Rect> searchAreas;
 //    Size pSize = pSrcImage.size();
 //    int type = pSrcImage.type();
-    height = pSrcImage.rows;
-    width = pSrcImage.cols;
 
     clock_t totalTime = clock();
     long int frameCount = 0;
@@ -300,20 +335,23 @@ int main(int argc, char **argv) {
     Mat lookUpTable(1, 256, CV_8U);
     uchar *p = lookUpTable.ptr();
 
+    int width = pSrcImage.cols;
+    int height = pSrcImage.rows;
+
     float xCoefficient = settings.viewingAngleX / width * settings.fps;
     float yCoefficient = settings.viewingAngleY / height * settings.fps;
 
-    int midX = settings.width / 2;
-    int midY = settings.height / 2;
+    int midX = width / 2;
+    int midY = height / 2;
 
-    SearchArea frame;
-    frame.id = 0;
-    frame.rect = Rect(0, 0, width, height);
+    Rect frame = Rect(0, 0, width, height);
 
+#ifdef NDEBUG
     I2C<Armor> i2c("/dev/i2c-1", 0x04);
+#endif
 
     for (int i = 0; i < 256; ++i)
-        p[i] = saturate_cast<uchar>(pow(i / 255.0, 4) * 255.0);
+        p[i] = saturate_cast<uchar>(pow(i / 255.0, 10) * 255.0);
 
     for (int tenFrame = 0; pSrcImage.data; tenFrame++) {
         frameCount++;
@@ -327,7 +365,7 @@ int main(int argc, char **argv) {
         } else {
             // TODO - Multi-threading
             for (unsigned int i = 0; i < searchAreaCount; i++) {
-                Mat subImage(pSrcImage, searchAreas[i].rect);
+                Mat subImage(pSrcImage, searchAreas[i]);
                 bool found = detect(subImage, searchAreas[i], armors[i], armors[i], lookUpTable, xCoefficient,
                                     yCoefficient, settings.zCoefficient);
                 if (!found) {
@@ -354,34 +392,36 @@ int main(int argc, char **argv) {
             }
         }
 
-        float minScore = 0;
-        Armor* resultArmor = nullptr;
-        auto numArmors = (unsigned int)armors.size();
-        if(numArmors > 1) {
-            for(unsigned int i = 0; i < numArmors; i++) {
+        auto numArmors = (unsigned int) armors.size();
+        Armor *resultArmor = &armors[0];
+        if (numArmors > 1) {
+            float minScore = abs(armors[0].x - midX) + abs(armors[0].y - midY) + armors[0].z +
+                             pow(armors[0].internal_velocity_x, 2) + pow(armors[0].internal_velocity_y, 2) +
+                             pow(armors[0].velocity_z, 2);
+            for (unsigned int i = 1; i < numArmors; i++) {
                 //TODO - score formula
-                float score = abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z + pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) + pow(armors[i].velocity_z, 2); // the smaller the better
-                if(score < minScore) {
+                float score = abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z +
+                              pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) +
+                              pow(armors[i].velocity_z, 2); // the smaller the better
+                if (score < minScore) {
                     minScore = score;
                     resultArmor = &armors[i];
                 }
             }
-        } else {
-            resultArmor = &armors[0];
         }
-
+#ifdef NDEBUG
         i2c.send(*resultArmor);
-
-        searchAreas.resize(armors.size());
-        getSearchArea(armors, searchAreas);
+#endif
+        searchAreas.resize(numArmors);
+        getSearchArea(armors, searchAreas, width, height);
 
 
 #ifndef NDEBUG
         if (playVideo) {
             pSrcImage.copyTo(pResultImage);
-            for (unsigned int i = 0; i < armors.size(); i++) {
+            for (unsigned int i = 0; i < numArmors; i++) {
                 circle(pResultImage, Point(armors[i].x, armors[i].y), 5, sTargetColor, CV_FILLED);
-                rectangle(pResultImage, searchAreas[i].rect, sTargetColor, 1);
+                rectangle(pResultImage, searchAreas[i], sTargetColor, 1);
                 putText(pResultImage, to_string(armors[i].z) + " m", Point(armors[i].x, armors[i].y),
                         FONT_HERSHEY_SIMPLEX,
                         1, sTargetColor, 2);
@@ -405,6 +445,8 @@ int main(int argc, char **argv) {
             break;
         else if (c == ' ')
             playVideo = !playVideo;
+//        else if(!numArmors)
+//            cin.get();
         if (playVideo)
             cap >> pSrcImage;
 #else
@@ -413,10 +455,9 @@ int main(int argc, char **argv) {
 #endif
 #else
         cap >> pSrcImage;
-#endif //ifndef NDEBUG
-
         endTime = clock();
         cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
+#endif //ifndef NDEBUG
     }
     cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << ", FPS:"
          << frameCount / (double) (clock() - totalTime) * CLOCKS_PER_SEC << endl;
