@@ -12,8 +12,9 @@ using namespace cv;
 using namespace std;
 
 #define PICTURE_MODE 0
+//#define FBF //frame by frame
 
-int nTargetColor = 2;
+int nTargetColor = 0;
 const int TARGET_RED = 2;
 const int TARGET_BLUE = 0;
 
@@ -32,7 +33,7 @@ void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
 
 bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
             const Mat &lookUpTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
-    Mat pDarkImage, pBinaryBrightness, pHSV, pBinaryColor;
+    Mat pDarkImage, pHSV, pBinaryColor, pBinaryBrightness;
     Size pSize = curSearchArea.size();
     vector<Armor> resultArmors;
 
@@ -46,17 +47,16 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
 
     ///gamma correction
     LUT(pSrcImage, lookUpTable, pDarkImage);
-    pBinaryBrightness = Mat::zeros(pSize, CV_8UC1);
 
     /// Color difference detection
     vector<Point> colorPoint;
     cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
 
-//#ifndef NDEBUG
-//    imshow("dark image", pDarkImage);
-//#endif
+#ifdef FBF
+    imshow("dark image", pDarkImage);
+#endif
 
-//    inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
+    inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
 
     if (nTargetColor == TARGET_RED) {
         Mat pBinaryColorLower, pBinaryColorUpper;
@@ -64,20 +64,20 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
         inRange(pHSV, Scalar(170, 0, 200), Scalar(179, 255, 255), pBinaryColorUpper);
         pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
     } else {
-        inRange(pHSV, Scalar(80, 0, 200), Scalar(120, 255, 255), pBinaryColor);
+        inRange(pHSV, Scalar(85, 0, 200), Scalar(125, 255, 255), pBinaryColor);
     }
 
-    pBinaryBrightness = pBinaryBrightness | pBinaryColor;
+    pBinaryColor = pBinaryBrightness | pBinaryColor;
 
     /// edge detection
-    blur(pBinaryBrightness, pBinaryBrightness, Size(3, 3));//use blur to reduce noise
-    Canny(pBinaryBrightness, pBinaryBrightness, 100, 200);
+    blur(pBinaryColor, pBinaryColor, Size(3, 3));//use blur to reduce noise
+    Canny(pBinaryColor, pBinaryColor, 100, 200);
 
     /// Margin detection and ellipse fitting
     vector<Vec4i> hierarchy;
     std::vector<std::vector<Point>> contours;
     /// Find contours
-    findContours(pBinaryBrightness, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE, Point(0, 0));
+    findContours(pBinaryColor, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
     vector<RotatedRect> minEllipse;
     /// Fit & filter ellipses
     auto contourSize = (unsigned int) contours.size();
@@ -93,20 +93,20 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
             if ((nTargetColor == TARGET_RED && red < blue) || (nTargetColor == TARGET_BLUE && blue < red)) continue;
             RotatedRect tmp = fitEllipse(Mat(contours[i]));
             float heightToWidth = tmp.size.height / tmp.size.width;
-            if ((tmp.angle < 30 || tmp.angle > 150) && tmp.size.width > 3 && heightToWidth > 1.5 &&
-                heightToWidth < 9) {
+            if ((tmp.angle < 30 || tmp.angle > 150) && tmp.size.width > 3 && heightToWidth > 1 &&
+                heightToWidth < 10) {
                 minEllipse.push_back(tmp);
-#ifndef NDEBUG
-                ellipse(pBinaryBrightness, tmp, Scalar(255,255,255), 1, 8);
+#ifdef FBF
+                ellipse(pBinaryBrightness, tmp, Scalar(255, 255, 255), 1, 8);
 #endif
             }
         }
     }
 
-//#ifndef NDEBUG
-//    imshow("binary color", pBinaryColor);
-//    imshow("binary brightness", pBinaryBrightness);
-//#endif
+#ifdef FBF
+    imshow("binary color", pBinaryColor);
+    imshow("ellipse", pBinaryBrightness);
+#endif
 
     /// Match ellipses to form armors
     auto minEllipseSize = (int) minEllipse.size();
@@ -181,6 +181,9 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
                     tmpArmor.angular_velocity_x = tmpArmor.internal_velocity_x * xCoefficient;
                     tmpArmor.angular_velocity_y = tmpArmor.internal_velocity_y * yCoefficient;
                 } else {
+                    tmpArmor.angular_velocity_x = 0;
+                    tmpArmor.angular_velocity_y = 0;
+
                     tmpArmor.internal_velocity_y = 0;
                     tmpArmor.internal_velocity_x = 0;
                     tmpArmor.velocity_z = 0;
@@ -256,8 +259,8 @@ void getSearchArea(vector<Armor> &armors, vector<Rect> &searchAreas, int width, 
         if (y + saHeight > height) {
             saHeight = height - y;
         }
-        if(saWidth == -7) {
-            cout << "" ;
+        if (saWidth == -7) {
+            cout << "";
         }
         searchAreas[i] = Rect((int) round(x), (int) round(y), (int) round(saWidth), (int) round(saHeight));
     }
@@ -440,7 +443,11 @@ int main(int argc, char **argv) {
         imshow("Result image", pResultImage);
 #if PICTURE_MODE == 0
         /// Press  ESC on keyboard to  exit
+#ifdef FBF
+        char c = (char) waitKey(0);
+#else
         char c = (char) waitKey(1);
+#endif
         if (c == 27)
             break;
         else if (c == ' ')

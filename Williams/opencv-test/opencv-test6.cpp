@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
     Mat lookUpTable(1, 256, CV_8U);
     uchar *p = lookUpTable.ptr();
     for (int i = 0; i < 256; ++i)
-        p[i] = saturate_cast<uchar>(pow(i / 255.0, 4) * 255.0);
+        p[i] = saturate_cast<uchar>(pow(i / 255.0, 10) * 255.0);
 
     for (int tenFrame; pSrcImage.data; tenFrame++) {
         armors.clear();
@@ -149,14 +149,13 @@ int main(int argc, char **argv) {
         Mat pBinaryColor;
 
         inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
-
         if (nTargetColor == TARGET_RED) {
             Mat pBinaryColorLower, pBinaryColorUpper;
-            inRange(pHSV, Scalar(0, 200, 200), Scalar(15, 255, 255), pBinaryColorLower);
-            inRange(pHSV, Scalar(165, 200, 200), Scalar(179, 255, 255), pBinaryColorUpper);
+            inRange(pHSV, Scalar(0, 0, 200), Scalar(30, 255, 255), pBinaryColorLower);
+            inRange(pHSV, Scalar(170, 0, 200), Scalar(179, 255, 255), pBinaryColorUpper);
             pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
         } else {
-            inRange(pHSV, Scalar(105, 200, 200), Scalar(135, 255, 255), pBinaryColor);
+            inRange(pHSV, Scalar(85, 0, 200), Scalar(125, 255, 255), pBinaryColor);
         }
 
         pBinaryBrightness = pBinaryBrightness | pBinaryColor;
@@ -225,12 +224,9 @@ int main(int argc, char **argv) {
                 float widthDifferenceRatio = abs(e1.size.width - e2.size.width) / (e1.size.width + e2.size.width);
                 float xDifferenceRatio = abs(e1.center.x - e2.center.x) / (e1.size.height + e2.size.height);
                 float yDifferenceRatio = abs(e1.center.y - e2.center.y) / (e1.size.height + e2.size.height);
-                if (i == 4 && j == 6) {
-                    cout << endl;
-                }
-                if ((angleDifference < 5 || angleDifference > 175) && heightDifferenceRatio < 0.1 &&
+                if ((angleDifference < 5 || angleDifference > 175) && heightDifferenceRatio < 0.2 &&
                     xDifferenceRatio > 0.5 &&
-                    xDifferenceRatio < 3 && yDifferenceRatio < 0.3 && widthDifferenceRatio < 0.3) {
+                    xDifferenceRatio < 3 && yDifferenceRatio < 0.3 && widthDifferenceRatio < 0.6) {
                     Armor armor;
                     unsigned int armorsSize = armors.size();
                     if (armorsSize > 0) {
@@ -301,7 +297,7 @@ int main(int argc, char **argv) {
         imshow("Result image", pResultImage);
 #if PICTURE_MODE == 0
         /// Press  ESC on keyboard to  exit
-        char c = (char) waitKey(1);
+        char c = (char) waitKey(0);
         if (c == 27)
             break;
         else if (c == ' ')

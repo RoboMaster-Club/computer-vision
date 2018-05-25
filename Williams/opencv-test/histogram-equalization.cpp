@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     if (argc == 2) {
         cap.open(argv[1]);
     } else {
-        cap.open("/home/why/robot_red_1m.mp4");
+        cap.open("/home/why/robot_red_5m_480p.mp4");
     }
     if (!cap.isOpened()) {
         printf("No image data \n");
