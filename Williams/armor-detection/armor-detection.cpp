@@ -11,7 +11,6 @@
 using namespace cv;
 using namespace std;
 
-#define PICTURE_MODE 0
 //#define FBF //frame by frame
 
 int nTargetColor = 0;
@@ -33,8 +32,8 @@ void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
 
 bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
             const Mat &lookUpTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
+
     Mat pDarkImage, pHSV, pBinaryColor, pBinaryBrightness;
-    Size pSize = curSearchArea.size();
     vector<Armor> resultArmors;
 
     /// histogram equalization
@@ -69,14 +68,11 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
 
     pBinaryColor = pBinaryBrightness | pBinaryColor;
 
-    /// edge detection
+    /// edge detection with Canny
     blur(pBinaryColor, pBinaryColor, Size(3, 3));//use blur to reduce noise
     Canny(pBinaryColor, pBinaryColor, 100, 200);
-
-    /// Margin detection and ellipse fitting
     vector<Vec4i> hierarchy;
     std::vector<std::vector<Point>> contours;
-    /// Find contours
     findContours(pBinaryColor, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
     vector<RotatedRect> minEllipse;
     /// Fit & filter ellipses
@@ -107,7 +103,6 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
     imshow("binary color", pBinaryColor);
     imshow("ellipse", pBinaryBrightness);
 #endif
-
     /// Match ellipses to form armors
     auto minEllipseSize = (int) minEllipse.size();
     RotatedRect e1, e2;
@@ -124,7 +119,6 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
                 xDifferenceRatio > 0.5 &&
                 xDifferenceRatio < 3 && yDifferenceRatio < 0.3 && widthDifferenceRatio < 0.6) {
                 Armor tmpArmor;
-                auto armorsSize = (unsigned int) armors.size();
                 if (e1.center.x > e2.center.x) {
                     RotatedRect tmp = e1;
                     e1 = e2;
@@ -277,9 +271,6 @@ int main(int argc, char **argv) {
     }
     Settings settings;
     settings.read(fs);
-#if PICTURE_MODE == 1
-    pSrcImage = imread(argv[1], 1);
-#else
     VideoCapture cap;
 
     if (settings.cameraID != -1) {
@@ -300,7 +291,6 @@ int main(int argc, char **argv) {
     cap.set(CV_CAP_PROP_EXPOSURE, settings.exposure);
 
     cap >> pSrcImage;
-#endif //if PICTURE_MODE == 1
 
 #ifndef NDEBUG
 
@@ -325,15 +315,14 @@ int main(int argc, char **argv) {
     printf("exposure = %.2f\n", cap.get(CV_CAP_PROP_EXPOSURE));
 
     bool playVideo = true;
+    clock_t totalTime = clock();
+    long int frameCount = 0;
 #endif //ifndef NDEBUG
 
     vector<Armor> armors;
     vector<Rect> searchAreas;
 //    Size pSize = pSrcImage.size();
 //    int type = pSrcImage.type();
-
-    clock_t totalTime = clock();
-    long int frameCount = 0;
 
     Mat lookUpTable(1, 256, CV_8U);
     uchar *p = lookUpTable.ptr();
@@ -357,9 +346,9 @@ int main(int argc, char **argv) {
         p[i] = saturate_cast<uchar>(pow(i / 255.0, 10) * 255.0);
 
     for (int tenFrame = 0; pSrcImage.data; tenFrame++) {
+#ifndef NDEBUG
         frameCount++;
-        clock_t startTime, endTime;
-        startTime = clock();
+#endif
 
         auto searchAreaCount = (unsigned int) searchAreas.size();
         if (searchAreaCount == 0) {
@@ -398,14 +387,14 @@ int main(int argc, char **argv) {
         auto numArmors = (unsigned int) armors.size();
         Armor *resultArmor = &armors[0];
         if (numArmors > 1) {
-            float minScore = abs(armors[0].x - midX) + abs(armors[0].y - midY) + armors[0].z +
-                             pow(armors[0].internal_velocity_x, 2) + pow(armors[0].internal_velocity_y, 2) +
-                             pow(armors[0].velocity_z, 2);
+            float minScore = (float)(abs(armors[0].x - midX) + abs(armors[0].y - midY) + armors[0].z +
+                                                pow(armors[0].internal_velocity_x, 2) + pow(armors[0].internal_velocity_y, 2) +
+                                                pow(armors[0].velocity_z, 2));
             for (unsigned int i = 1; i < numArmors; i++) {
                 //TODO - score formula
-                float score = abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z +
-                              pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) +
-                              pow(armors[i].velocity_z, 2); // the smaller the better
+                float score = (float)(abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z +
+                                                 pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) +
+                                                 pow(armors[i].velocity_z, 2)); // the smaller the better
                 if (score < minScore) {
                     minScore = score;
                     resultArmor = &armors[i];
@@ -441,8 +430,6 @@ int main(int argc, char **argv) {
             }
         }
         imshow("Result image", pResultImage);
-#if PICTURE_MODE == 0
-        /// Press  ESC on keyboard to  exit
 #ifdef FBF
         char c = (char) waitKey(0);
 #else
@@ -455,22 +442,13 @@ int main(int argc, char **argv) {
 //        else if(!numArmors)
 //            cin.get();
         if (playVideo)
-            cap >> pSrcImage;
-#else
-        waitKey(0);
-        break;
-#endif
-#else
-        cap >> pSrcImage;
-        endTime = clock();
-        cout << (double) (endTime - startTime) / CLOCKS_PER_SEC << endl;
 #endif //ifndef NDEBUG
+            cap >> pSrcImage;
     }
-    cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << ", FPS:"
+#ifndef NDEBUG
+    cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << "s, FPS: "
          << frameCount / (double) (clock() - totalTime) * CLOCKS_PER_SEC << endl;
-
-#if PICTURE_MODE == 0
-    cap.release();
 #endif
+    cap.release();
     return 0;
 }

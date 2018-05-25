@@ -1,7 +1,3 @@
-//
-// Created by why on 5/8/18.
-//
-
 #include "Settings.h"
 
 void Settings::write(FileStorage &fs) const {
