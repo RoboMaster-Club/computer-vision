@@ -13,7 +13,7 @@ using namespace std;
 
 //#define FBF //frame by frame
 
-int nTargetColor = 0;
+int nTargetColor = 2;
 const int TARGET_RED = 2;
 const int TARGET_BLUE = 0;
 
