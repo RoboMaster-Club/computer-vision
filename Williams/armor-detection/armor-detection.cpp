@@ -112,7 +112,6 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
     auto minEllipseSize = (int) minEllipse.size();
     RotatedRect *e1, *e2;
     for (int i = 0; i < minEllipseSize - 1; i++) {
-#pragma omp for
         for (int j = i + 1; j < minEllipseSize; j++) {
             e1 = &minEllipse[i];
             e2 = &minEllipse[j];
