@@ -2,6 +2,8 @@
 #include <vector>
 #include <algorithm>
 #include <opencv2/opencv.hpp>
+#include <opencv2/cudaarithm.hpp>
+#include <inRange_gpu.h>
 
 #include "Settings.h"
 #include "SearchArea.h"
@@ -30,11 +32,16 @@ void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
 
 #endif
 
-bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
-            const Mat &lookUpTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
+bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
+            Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
 
-    Mat pDarkImage, pHSV, pBinaryColor, pBinaryBrightness;
+    Size size = mSrcImage.size();
+    int type = mSrcImage.type();
+
+    cuda::GpuMat pSrcImage, pDarkImage(size, type), pHSV(size, type), pBinaryColor(size, CV_8UC1), pBinaryBrightness(size, CV_8UC1);
     vector<Armor> resultArmors;
+
+    pSrcImage.upload(mSrcImage);
 
     /// histogram equalization
 //    cvtColor(pSrcImage, pDarkImage, COLOR_BGR2YCrCb);
@@ -45,28 +52,30 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
 //    cvtColor(pDarkImage, pDarkImage, COLOR_YCrCb2BGR);
 
     ///gamma correction
-    LUT(pSrcImage, lookUpTable, pDarkImage);
+    lookupTable->transform(pSrcImage, pDarkImage);
 
     /// Color difference detection
     vector<Point> colorPoint;
-    cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
+    cuda::cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
 
 #ifdef FBF
     imshow("dark image", pDarkImage);
 #endif
 
-    inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
+    inRange_gpu(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
 
     if (nTargetColor == TARGET_RED) {
-        Mat pBinaryColorLower, pBinaryColorUpper;
-        inRange(pHSV, Scalar(0, 0, 200), Scalar(30, 255, 255), pBinaryColorLower);
-        inRange(pHSV, Scalar(170, 0, 200), Scalar(179, 255, 255), pBinaryColorUpper);
-        pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
+        cuda::GpuMat pBinaryColorLower, pBinaryColorUpper;
+        inRange_gpu(pHSV, Scalar(0, 0, 200), Scalar(30, 255, 255), pBinaryColorLower);
+        inRange_gpu(pHSV, Scalar(170, 0, 200), Scalar(179, 255, 255), pBinaryColorUpper);
+//        pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
+        cuda::bitwise_or(pBinaryColorLower, pBinaryColorUpper, pBinaryColor);
     } else {
-        inRange(pHSV, Scalar(85, 0, 200), Scalar(125, 255, 255), pBinaryColor);
+        inRange_gpu(pHSV, Scalar(85, 0, 200), Scalar(125, 255, 255), pBinaryColor);
     }
 
-    pBinaryColor = pBinaryBrightness | pBinaryColor;
+//    pBinaryColor = pBinaryBrightness | pBinaryColor;
+    cuda::bitwise_or(pBinaryColor, pBinaryBrightness, pBinaryColor);
 
     /// edge detection with Canny
     blur(pBinaryColor, pBinaryColor, Size(3, 3));//use blur to reduce noise
@@ -75,6 +84,8 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
     std::vector<std::vector<Point>> contours;
     findContours(pBinaryColor, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
     vector<RotatedRect> minEllipse;
+    Mat mHSV;
+    pHSV.download(mHSV);
     /// Fit & filter ellipses
     auto contourSize = (unsigned int) contours.size();
     for (unsigned int i = 0; i < contourSize; i++) {
@@ -82,7 +93,7 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
         if (pointsOnContour > 5) {
             int red = 0, blue = 0;
             for (unsigned int j = 0; j < pointsOnContour; j++) {
-                int color = pHSV.at<Vec3b>(contours[i][j])[0];
+                int color = mHSV.at<Vec3b>(contours[i][j])[0];
                 if (color <= 60 || color >= 150) red++;
                 else blue++;
             }
@@ -194,7 +205,7 @@ bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *refere
 }
 
 bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor &referenceArmor, Armor &armor,
-            const Mat &lookupTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
+            Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
     vector<Armor> armors;
     bool found = detect(pSrcImage, curSearchArea, &referenceArmor, armors, lookupTable, xCoefficient, yCoefficient,
                         zCoefficient);
@@ -345,6 +356,8 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 256; ++i)
         p[i] = saturate_cast<uchar>(pow(i / 255.0, 10) * 255.0);
 
+    Ptr<cuda::LookUpTable> lut = cuda::createLookUpTable(lookUpTable);
+
     for (int tenFrame = 0; pSrcImage.data; tenFrame++) {
 #ifndef NDEBUG
         frameCount++;
@@ -352,7 +365,7 @@ int main(int argc, char **argv) {
 
         auto searchAreaCount = (unsigned int) searchAreas.size();
         if (searchAreaCount == 0) {
-            detect(pSrcImage, frame, nullptr, armors, lookUpTable, xCoefficient, yCoefficient, settings.zCoefficient);
+            detect(pSrcImage, frame, nullptr, armors, lut, xCoefficient, yCoefficient, settings.zCoefficient);
             tenFrame = 0;
         } else {
             // TODO - Multi-threading
