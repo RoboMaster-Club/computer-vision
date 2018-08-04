@@ -15,7 +15,7 @@ using namespace std;
 
 //#define FBF //frame by frame
 
-int nTargetColor = 0;
+int nTargetColor = 2;
 const int TARGET_RED = 2;
 const int TARGET_BLUE = 0;
 
@@ -23,33 +23,29 @@ const int TARGET_BLUE = 0;
 const Scalar sWhite = Scalar(255, 255, 255);
 Scalar sTargetColor;
 
-void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
-    if (event == EVENT_LBUTTONDOWN) {
-        Point p = Point(x, y);
-        cout << ((Mat *) userdata)->at<Vec3b>(p) << endl;
-    }
-}
+//void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
+//    if (event == EVENT_LBUTTONDOWN) {
+//        Point p = Point(x, y);
+//        cout << ((Mat *) userdata)->at<Vec3b>(p) << endl;
+//    }
+//}
 
 #endif
 
 bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
-            Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
+            Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient,
+            const float zCoefficient) {
+
+    armors.clear();
 
     Size size = mSrcImage.size();
     int type = mSrcImage.type();
 
-    cuda::GpuMat pSrcImage, pDarkImage(size, type), pHSV(size, type), pBinaryColor(size, CV_8UC1), pBinaryBrightness(size, CV_8UC1);
-    vector<Armor> resultArmors;
+    cuda::GpuMat pSrcImage, pDarkImage(size, type), pHSV(size, type), pBinaryColor(size, CV_8UC1), pBinaryBrightness(
+            size, CV_8UC1);
 
     pSrcImage.upload(mSrcImage);
 
-    /// histogram equalization
-//    cvtColor(pSrcImage, pDarkImage, COLOR_BGR2YCrCb);
-//    vector<Mat> channels;
-//    split(pDarkImage, channels);
-//    equalizeHist(channels[0], channels[0]);
-//    merge(channels, pDarkImage);
-//    cvtColor(pDarkImage, pDarkImage, COLOR_YCrCb2BGR);
 
     ///gamma correction
     lookupTable->transform(pSrcImage, pDarkImage);
@@ -59,33 +55,30 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
     cuda::cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
 
 #ifdef FBF
-    imshow("dark image", pDarkImage);
+    //    imshow("dark image", pDarkImage);
 #endif
 
     inRange_gpu(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
 
     if (nTargetColor == TARGET_RED) {
-        cuda::GpuMat pBinaryColorLower, pBinaryColorUpper;
+        cuda::GpuMat pBinaryColorLower(size, CV_8UC1), pBinaryColorUpper(size, CV_8UC1);
         inRange_gpu(pHSV, Scalar(0, 0, 200), Scalar(30, 255, 255), pBinaryColorLower);
         inRange_gpu(pHSV, Scalar(170, 0, 200), Scalar(179, 255, 255), pBinaryColorUpper);
-//        pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
         cuda::bitwise_or(pBinaryColorLower, pBinaryColorUpper, pBinaryColor);
     } else {
         inRange_gpu(pHSV, Scalar(85, 0, 200), Scalar(125, 255, 255), pBinaryColor);
     }
-
-//    pBinaryColor = pBinaryBrightness | pBinaryColor;
     cuda::bitwise_or(pBinaryColor, pBinaryBrightness, pBinaryColor);
 
-    /// edge detection with Canny
-    blur(pBinaryColor, pBinaryColor, Size(3, 3));//use blur to reduce noise
-    Canny(pBinaryColor, pBinaryColor, 100, 200);
+    Mat mHSV(size, type), mBinaryColor(size, CV_8UC1);
+    pBinaryColor.download(mBinaryColor);
+    pHSV.download(mHSV);
+
     vector<Vec4i> hierarchy;
     std::vector<std::vector<Point>> contours;
-    findContours(pBinaryColor, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    findContours(mBinaryColor, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
     vector<RotatedRect> minEllipse;
-    Mat mHSV;
-    pHSV.download(mHSV);
+
     /// Fit & filter ellipses
     auto contourSize = (unsigned int) contours.size();
     for (unsigned int i = 0; i < contourSize; i++) {
@@ -111,48 +104,50 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
     }
 
 #ifdef FBF
-    imshow("binary color", pBinaryColor);
-    imshow("ellipse", pBinaryBrightness);
+    imshow("binary color", mBinaryColor);
+    imshow("HSV", mHSV);
+//    imshow("ellipse", pBinaryBrightness);
 #endif
     /// Match ellipses to form armors
     auto minEllipseSize = (int) minEllipse.size();
-    RotatedRect e1, e2;
+    RotatedRect *e1, *e2;
     for (int i = 0; i < minEllipseSize - 1; i++) {
+#pragma omp for
         for (int j = i + 1; j < minEllipseSize; j++) {
-            e1 = minEllipse[i];
-            e2 = minEllipse[j];
-            float angleDifference = abs(e1.angle - e2.angle);
-            float heightDifferenceRatio = abs(e1.size.height - e2.size.height) / (e1.size.height + e2.size.height);
-            float widthDifferenceRatio = abs(e1.size.width - e2.size.width) / (e1.size.width + e2.size.width);
-            float xDifferenceRatio = abs(e1.center.x - e2.center.x) / (e1.size.height + e2.size.height);
-            float yDifferenceRatio = abs(e1.center.y - e2.center.y) / (e1.size.height + e2.size.height);
+            e1 = &minEllipse[i];
+            e2 = &minEllipse[j];
+            float angleDifference = abs(e1->angle - e2->angle);
+            float heightDifferenceRatio = abs(e1->size.height - e2->size.height) / (e1->size.height + e2->size.height);
+            float widthDifferenceRatio = abs(e1->size.width - e2->size.width) / (e1->size.width + e2->size.width);
+            float xDifferenceRatio = abs(e1->center.x - e2->center.x) / (e1->size.height + e2->size.height);
+            float yDifferenceRatio = abs(e1->center.y - e2->center.y) / (e1->size.height + e2->size.height);
             if ((angleDifference < 5 || angleDifference > 175) && heightDifferenceRatio < 0.2 &&
                 xDifferenceRatio > 0.5 &&
                 xDifferenceRatio < 3 && yDifferenceRatio < 0.3 && widthDifferenceRatio < 0.6) {
                 Armor tmpArmor;
-                if (e1.center.x > e2.center.x) {
-                    RotatedRect tmp = e1;
+                if (e1->center.x > e2->center.x) {
+                    RotatedRect *tmp = e1;
                     e1 = e2;
                     e2 = tmp;
                 }
-                tmpArmor.width = e2.center.x - e1.center.x;
-                tmpArmor.height = e1.size.height + e2.size.height;
-                float angle1 = e1.angle * (float) M_PI / 180;
-                float angle2 = e2.angle * (float) M_PI / 180;
+                tmpArmor.width = e2->center.x - e1->center.x;
+                tmpArmor.height = e1->size.height + e2->size.height;
+                float angle1 = e1->angle * (float) M_PI / 180;
+                float angle2 = e2->angle * (float) M_PI / 180;
                 float sin1 = sin(angle1), sin2 = sin(angle2), cos1 = cos(angle1), cos2 = cos(angle2);
-                Point upperLeft = Point((int) round(e1.center.x - sin1 * e1.size.height),
-                                        (int) round(e1.center.y + cos1 * e1.size.height));
-                Point lowerLeft = Point((int) round(e1.center.x + sin1 * e1.size.height),
-                                        (int) round(e1.center.y - cos1 * e1.size.height));
+                Point upperLeft = Point((int) round(e1->center.x - sin1 * e1->size.height),
+                                        (int) round(e1->center.y + cos1 * e1->size.height));
+                Point lowerLeft = Point((int) round(e1->center.x + sin1 * e1->size.height),
+                                        (int) round(e1->center.y - cos1 * e1->size.height));
                 if (upperLeft.y > lowerLeft.y) {
                     Point tmp = upperLeft;
                     upperLeft = lowerLeft;
                     lowerLeft = tmp;
                 }
-                Point upperRight = Point((int) round(e2.center.x - sin2 * e2.size.height),
-                                         (int) round(e2.center.y + cos2 * e2.size.height));
-                Point lowerRight = Point((int) round(e2.center.x + sin2 * e2.size.height),
-                                         (int) round(e2.center.y - cos2 * e2.size.height));
+                Point upperRight = Point((int) round(e2->center.x - sin2 * e2->size.height),
+                                         (int) round(e2->center.y + cos2 * e2->size.height));
+                Point lowerRight = Point((int) round(e2->center.x + sin2 * e2->size.height),
+                                         (int) round(e2->center.y - cos2 * e2->size.height));
                 if (upperRight.y > lowerRight.y) {
                     Point tmp = upperRight;
                     upperRight = lowerRight;
@@ -177,7 +172,7 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
                                                                       upperRight.x * lowerLeft.y)) /
                              ((-upperRight.x + lowerLeft.x) * (upperLeft.y - lowerRight.y) -
                               (-upperLeft.x + lowerRight.x) * (upperRight.y - lowerLeft.y));
-                tmpArmor.z = zCoefficient / (e1.size.height + e2.size.height);
+                tmpArmor.z = zCoefficient / (e1->size.height + e2->size.height);
 
                 if (referenceArmor != nullptr) {
                     tmpArmor.internal_velocity_x = tmpArmor.x - referenceArmor->x;
@@ -193,19 +188,16 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
                     tmpArmor.internal_velocity_x = 0;
                     tmpArmor.velocity_z = 0;
                 }
-                resultArmors.push_back(tmpArmor);
+                armors.push_back(tmpArmor);
             }
         }
     }
-    if (resultArmors.empty()) {
-        return false;
-    }
-    armors = resultArmors;
-    return true;
+    return !armors.empty();
 }
 
 bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor &referenceArmor, Armor &armor,
-            Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
+            Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient,
+            const float zCoefficient) {
     vector<Armor> armors;
     bool found = detect(pSrcImage, curSearchArea, &referenceArmor, armors, lookupTable, xCoefficient, yCoefficient,
                         zCoefficient);
@@ -371,8 +363,8 @@ int main(int argc, char **argv) {
             // TODO - Multi-threading
             for (unsigned int i = 0; i < searchAreaCount; i++) {
                 Mat subImage(pSrcImage, searchAreas[i]);
-                bool found = detect(subImage, searchAreas[i], armors[i], armors[i], lookUpTable, xCoefficient,
-                                    yCoefficient, settings.zCoefficient);
+                bool found = detect(subImage, searchAreas[i], armors[i], armors[i], lut, xCoefficient, yCoefficient,
+                                    settings.zCoefficient);
                 if (!found) {
                     armors.erase(armors.begin() + i);
                     searchAreas.erase(searchAreas.begin() + i);
@@ -389,7 +381,7 @@ int main(int argc, char **argv) {
                               Scalar(0, 0, 0), CV_FILLED);
                 }
                 vector<Armor> newArmors;
-                bool found = detect(pSrcImage, frame, nullptr, newArmors, lookUpTable, xCoefficient, yCoefficient,
+                bool found = detect(pSrcImage, frame, nullptr, newArmors, lut, xCoefficient, yCoefficient,
                                     settings.zCoefficient);
                 if (found)
                     armors.insert(armors.end(), newArmors.begin(), newArmors.end());
@@ -400,14 +392,14 @@ int main(int argc, char **argv) {
         auto numArmors = (unsigned int) armors.size();
         Armor *resultArmor = &armors[0];
         if (numArmors > 1) {
-            float minScore = (float)(abs(armors[0].x - midX) + abs(armors[0].y - midY) + armors[0].z +
-                                                pow(armors[0].internal_velocity_x, 2) + pow(armors[0].internal_velocity_y, 2) +
-                                                pow(armors[0].velocity_z, 2));
+            float minScore = (float) (abs(armors[0].x - midX) + abs(armors[0].y - midY) + armors[0].z +
+                                      pow(armors[0].internal_velocity_x, 2) + pow(armors[0].internal_velocity_y, 2) +
+                                      pow(armors[0].velocity_z, 2));
             for (unsigned int i = 1; i < numArmors; i++) {
                 //TODO - score formula
-                float score = (float)(abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z +
-                                                 pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) +
-                                                 pow(armors[i].velocity_z, 2)); // the smaller the better
+                float score = (float) (abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z +
+                                       pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) +
+                                       pow(armors[i].velocity_z, 2)); // the smaller the better
                 if (score < minScore) {
                     minScore = score;
                     resultArmor = &armors[i];
