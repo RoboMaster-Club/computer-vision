@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <opencv_storage>
-<input>"/home/why/robot_red_3m_480p.mp4"</input>
+<input>"/home/why/computer-vision/robot_red_3m.mp4"</input>
 <width>640</width>
 <height>480</height>
 <fps>30</fps>
