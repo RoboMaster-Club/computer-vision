@@ -31,7 +31,7 @@ int main( int argc, const char** argv )
 //    String eyes_cascade_name = parser.get<String>("eyes_cascade");
 
     //-- 1. Load the cascades
-    if( !face_cascade.load("/home/why/SEU-Robomasters2017/armor-sample/blue/result/cascade.xml") )
+    if( !face_cascade.load("/home/why/computer-vision/Williams/cascade-classifier-test/cascade.xml") )
     {
         cout << "--(!)Error loading face cascade\n";
         return -1;
