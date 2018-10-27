@@ -11,16 +11,16 @@ using namespace std;
 using namespace cv;
 
 /** Function Headers */
-void detectAndDisplay( Mat frame );
+void detectAndDisplay(Mat frame);
 
 /** Global variables */
-Ptr<cuda::CascadeClassifier> face_cascade = cuda::CascadeClassifier::create("/home/why/SEU-Robomasters2017/armor-sample/blue/result/cascade.xml");
+Ptr<cuda::CascadeClassifier> face_cascade = cuda::CascadeClassifier::create(
+        "/home/why/computer-vision/Williams/cascade-classifier-test/cascade.xml");
 //CascadeClassifier face_cascade;
 //CascadeClassifier eyes_cascade;
 
 /** @function main */
-int main( int argc, const char** argv )
-{
+int main(int argc, const char **argv) {
 //    CommandLineParser parser(argc, argv,
 //                             "{help h||}"
 //                             "{face_cascade|../../data/haarcascades/haarcascade_frontalface_alt.xml|Path to face cascade.}"
@@ -50,26 +50,22 @@ int main( int argc, const char** argv )
     VideoCapture capture;
     //-- 2. Read the video stream
     capture.open("/home/why/computer-vision/robot_blue_3m_480p.mp4");
-    if ( ! capture.isOpened() )
-    {
+    if (!capture.isOpened()) {
         cout << "--(!)Error opening video capture\n";
         return -1;
     }
 
     Mat frame;
-    while ( capture.read(frame) )
-    {
-        if( frame.empty() )
-        {
+    while (capture.read(frame)) {
+        if (frame.empty()) {
             cout << "--(!) No captured frame -- Break!\n";
             break;
         }
 
         //-- 3. Apply the classifier to the frame
-        detectAndDisplay( frame );
+        detectAndDisplay(frame);
 
-        if( waitKey(10) == 27 )
-        {
+        if (waitKey(10) == 27) {
             break; // escape
         }
     }
@@ -77,20 +73,22 @@ int main( int argc, const char** argv )
 }
 
 /** @function detectAndDisplay */
-void detectAndDisplay( Mat frame )
-{
-    cuda::GpuMat frame_gray;
-    cuda::cvtColor( frame, frame_gray, COLOR_BGR2GRAY );
-    cuda::equalizeHist( frame_gray, frame_gray );
+void detectAndDisplay(Mat frame) {
+    Size size = frame.size();
+    int type = frame.type();
+
+    cuda::GpuMat gpu_frame(size, type), frame_gray;
+
+    cuda::cvtColor(gpu_frame, frame_gray, COLOR_BGR2GRAY);
+    cuda::equalizeHist(frame_gray, frame_gray);
 
     //-- Detect faces
     std::vector<Rect> faces;
-    face_cascade->detectMultiScale( frame_gray, faces );
+    face_cascade->detectMultiScale(frame_gray, faces);
 
-    for ( size_t i = 0; i < faces.size(); i++ )
-    {
-        Point center( faces[i].x + faces[i].width/2, faces[i].y + faces[i].height/2 );
-        ellipse( frame, center, Size( faces[i].width/2, faces[i].height/2 ), 0, 0, 360, Scalar( 255, 0, 255 ), 4 );
+    for (size_t i = 0; i < faces.size(); i++) {
+        Point center(faces[i].x + faces[i].width / 2, faces[i].y + faces[i].height / 2);
+        ellipse(frame, center, Size(faces[i].width / 2, faces[i].height / 2), 0, 0, 360, Scalar(255, 0, 255), 4);
 
 //        cuda::GpuMat faceROI = frame_gray( faces[i] );
 
@@ -107,5 +105,5 @@ void detectAndDisplay( Mat frame )
     }
 
     //-- Show what you got
-    imshow( "Capture - Face detection", frame );
+    imshow("Capture - Face detection", frame);
 }

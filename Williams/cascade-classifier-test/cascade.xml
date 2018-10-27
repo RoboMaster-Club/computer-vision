@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <opencv_storage>
-<cascade>
+<cascade type_id="opencv-haar-classifier">
   <stageType>BOOST</stageType>
   <featureType>HAAR</featureType>
   <height>24</height>
