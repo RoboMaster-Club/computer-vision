@@ -70,6 +70,9 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
     }
     cuda::bitwise_or(pBinaryColor, pBinaryBrightness, pBinaryColor);
 
+    cv::Ptr<cv::cuda::CannyEdgeDetector> canny = cv::cuda::createCannyEdgeDetector(100, 300, 3, false);
+    canny->detect(pBinaryColor, pBinaryColor);
+
     Mat mHSV(size, type), mBinaryColor(size, CV_8UC1);
     pBinaryColor.download(mBinaryColor);
     pHSV.download(mHSV);
