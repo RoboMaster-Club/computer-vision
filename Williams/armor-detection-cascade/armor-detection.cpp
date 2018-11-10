@@ -37,6 +37,8 @@ bool detectMultiple(const Mat &pSrcImage, const Rect &curSearchArea, const Armor
     Mat pGray;
     cvtColor(pSrcImage, pGray, COLOR_BGR2GRAY);
     equalizeHist(pGray, pGray);
+imshow("tmp", pGray);
+waitKey(0);
 
     vector<Rect> armorRect;
     cascade.detectMultiScale(pGray, armorRect);
