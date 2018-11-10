@@ -38,6 +38,12 @@ bool detectMultiple(const Mat &pSrcImage, const Rect &curSearchArea, const Armor
     cuda::cvtColor(gSrcImage, gGray, COLOR_BGR2GRAY);
     cuda::equalizeHist(gGray, gGray);
 
+//    Mat tmp;
+//    gGray.download(tmp);
+//    imshow("tmp", tmp);
+//
+//    waitKey(0);
+
     vector<Rect> armorRect;
     cascade->detectMultiScale(gGray, objBuf);
     cascade->convert(objBuf, armorRect);
@@ -216,6 +222,7 @@ int main(int argc, char **argv) {
 #endif
 
     Ptr<cuda::CascadeClassifier> cascade = cuda::CascadeClassifier::create(settings.cascade);
+//    cascade->setScaleFactor(1.01);
     for (int tenFrame = 0; pSrcImage.data; tenFrame++) {
 #ifndef NDEBUG
         frameCount++;
@@ -305,7 +312,7 @@ int main(int argc, char **argv) {
 #ifdef FBF
         char c = (char) waitKey(0);
 #else
-        char c = (char) waitKey(0);
+        char c = (char) waitKey(1);
 #endif
         if (c == 27)
             break;
