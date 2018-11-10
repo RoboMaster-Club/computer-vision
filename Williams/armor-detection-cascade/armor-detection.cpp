@@ -45,6 +45,7 @@ bool detectMultiple(const Mat &pSrcImage, const Rect &curSearchArea, const Armor
 //    waitKey(0);
 
     vector<Rect> armorRect;
+
     cascade->detectMultiScale(gGray, objBuf);
     cascade->convert(objBuf, armorRect);
 
@@ -222,6 +223,9 @@ int main(int argc, char **argv) {
 #endif
 
     Ptr<cuda::CascadeClassifier> cascade = cuda::CascadeClassifier::create(settings.cascade);
+    cascade->setFindLargestObject(true);
+    cascade->setScaleFactor(1.01);
+    cascade->setMinNeighbors(0);
 //    cascade->setScaleFactor(1.01);
     for (int tenFrame = 0; pSrcImage.data; tenFrame++) {
 #ifndef NDEBUG
