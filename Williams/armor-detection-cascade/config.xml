@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<opencv_storage>
+    <input>"/home/why/computer-vision/robot_blue_3m_480p.mp4"</input>
+    <cascade>"/home/why/computer-vision/Williams/armor-detection-cascade/cascade.xml"</cascade>
+    <width>640</width>
+    <height>480</height>
+    <fps>30</fps>
+    <viewing_angle_x>1.8171600103378296e+00</viewing_angle_x>
+    <viewing_angle_y>1.8171600103378296e+00</viewing_angle_y>
+    <z_coefficient>250.</z_coefficient>
+    <brightness>0</brightness>
+    <contrast>5.0000000000000000e-01</contrast>
+    <saturation>5.0000000000000000e-01</saturation>
+    <hue>5.0000000000000000e-01</hue>
+    <gain>0.</gain>
+    <exposure>3.0000000745058060e-02</exposure>
+    <is_fisheye>0</is_fisheye>
+</opencv_storage>
