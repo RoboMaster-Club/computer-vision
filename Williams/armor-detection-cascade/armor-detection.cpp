@@ -45,8 +45,10 @@ bool detectMultiple(const Mat &pSrcImage, const Rect &curSearchArea, const Armor
 
     Armor tmpArmor;
     for (unsigned i = 0; i < armorSize; i++) {
-        tmpArmor.x = curSearchArea.tl().x + armorRect[i].x + armorRect[i].width / 2;
-        tmpArmor.y = curSearchArea.tl().y + armorRect[i].y + armorRect[i].width / 2;
+        tmpArmor.width = armorRect[i].width;
+        tmpArmor.height = armorRect[i].height;
+        tmpArmor.x = curSearchArea.tl().x + armorRect[i].x + (float)armorRect[i].width / 2;
+        tmpArmor.y = curSearchArea.tl().y + armorRect[i].y + (float)armorRect[i].height / 2;
         tmpArmor.z = zCoefficient / armorRect[i].height;
         if (referenceArmor != nullptr) {
             tmpArmor.internal_velocity_x = tmpArmor.x - referenceArmor->x;
