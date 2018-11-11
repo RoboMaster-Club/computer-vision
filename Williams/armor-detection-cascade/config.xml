@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <opencv_storage>
-    <input>"/home/nvidia/computer-vision/robot_blue_3m_480p.mp4"</input>
-    <cascade>"/home/nvidia/computer-vision/Williams/armor-detection-cascade/cascade.xml"</cascade>
+    <input>"/home/why/computer-vision/robot_blue_3m_480p.mp4"</input>
+    <cascade>"/home/why/computer-vision/Williams/armor-detection-cascade/cascade.xml"</cascade>
     <width>640</width>
     <height>480</height>
     <fps>30</fps>
