@@ -1,0 +1,10 @@
+Compile:
+cmake -DCMAKE_BUILD_TYPE=Release .
+make
+
+Before running:
+Edit config.xml first to change the file locations
+Attention: use absolute path only
+
+Run:
+./armor-detection
