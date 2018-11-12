@@ -145,6 +145,11 @@ void getSearchArea(vector<Armor> &armors, vector<Rect> &searchAreas, int width, 
     }
 }
 
+void outputResult(Armor *resultArmor) {
+//    i2c.send(*resultArmor);
+    printf("x: %f, y: %f, z: %fm, vx: %frad/s, vy: %frad/s, vz: %fm/s\n", resultArmor->x, resultArmor->y, resultArmor->z, resultArmor->angular_velocity_x, resultArmor->angular_velocity_y, resultArmor->velocity_z);
+}
+
 int main(int argc, char **argv) {
 
     Mat pSrcImage;
@@ -284,9 +289,9 @@ int main(int argc, char **argv) {
                 }
             }
         }
-#ifdef NDEBUG
-        i2c.send(*resultArmor);
-#endif
+
+        outputResult(resultArmor);
+
         searchAreas.resize(numArmors);
         getSearchArea(armors, searchAreas, width, height);
 
