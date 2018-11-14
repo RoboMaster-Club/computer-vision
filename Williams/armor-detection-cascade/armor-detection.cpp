@@ -135,7 +135,7 @@ void getSearchArea(vector<Armor> &armors, vector<Rect> &searchAreas, int width, 
             saHeight = saHeight + y;
             y = 0;
         }
-        if (y + saHeight > height) {
+        if (y + saHeight > height - 1) {
             saHeight = height - y;
         }
         if (saWidth == -7) {
@@ -212,8 +212,8 @@ int main(int argc, char **argv) {
     vector<Armor> armors;
     vector<Rect> searchAreas;
 
-    int width = pSrcImage.cols;
-    int height = pSrcImage.rows;
+    int width = pSrcImage.cols - 1;
+    int height = pSrcImage.rows - 1;
 
     float xCoefficient = settings.viewingAngleX / width * settings.fps;
     float yCoefficient = settings.viewingAngleY / height * settings.fps;
