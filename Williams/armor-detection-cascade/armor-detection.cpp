@@ -220,6 +220,7 @@ int main(int argc, char **argv) {
 
     int midX = width / 2;
     int midY = height / 2;
+    long foundCount = 0;
 
     Rect frame = Rect(0, 0, width, height);
 
@@ -274,23 +275,26 @@ int main(int argc, char **argv) {
 
         auto numArmors = (unsigned int) armors.size();
         Armor *resultArmor = &armors[0];
-        if (numArmors > 1) {
-            float minScore = (float) (abs(armors[0].x - midX) + abs(armors[0].y - midY) + armors[0].z +
+	if (numArmors > 0) {
+            if (numArmors > 1) {
+                float minScore = (float) (abs(armors[0].x - midX) + abs(armors[0].y - midY) + armors[0].z +
                                       pow(armors[0].internal_velocity_x, 2) + pow(armors[0].internal_velocity_y, 2) +
                                       pow(armors[0].velocity_z, 2));
-            for (unsigned int i = 1; i < numArmors; i++) {
-                //TODO - score formula
-                float score = (float) (abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z +
+                for (unsigned int i = 1; i < numArmors; i++) {
+                    //TODO - score formula
+                    float score = (float) (abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z +
                                        pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) +
                                        pow(armors[i].velocity_z, 2)); // the smaller the better
-                if (score < minScore) {
-                    minScore = score;
-                    resultArmor = &armors[i];
+                    if (score < minScore) {
+                        minScore = score;
+                        resultArmor = &armors[i];
+                    }
                 }
             }
-        }
+	    outputResult(resultArmor);
+	    foundCount++;
+	}
 
-        outputResult(resultArmor);
 
         searchAreas.resize(numArmors);
         getSearchArea(armors, searchAreas, width, height);
@@ -336,6 +340,7 @@ int main(int argc, char **argv) {
 #ifndef NDEBUG
     cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << "s, FPS: "
          << frameCount / (double) (clock() - totalTime) * CLOCKS_PER_SEC << endl;
+    cout << "detection rate: " << (double)foundCount / frameCount << endl;
 #endif
     cap.release();
     return 0;
