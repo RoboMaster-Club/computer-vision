@@ -2,16 +2,11 @@
 #include <vector>
 #include <algorithm>
 #include <opencv2/opencv.hpp>
-#include <opencv2/cudaarithm.hpp>
-#include <inRange_gpu.h>
-#include <librealsense2/rs.hpp>
-#include <math.h>
 
 #include "Settings.h"
 #include "SearchArea.h"
 #include "Armor.h"
-#include "UART.h"
-
+#include "I2C.h"
 
 using namespace cv;
 using namespace std;
@@ -26,67 +21,60 @@ const int TARGET_BLUE = 0;
 const Scalar sWhite = Scalar(255, 255, 255);
 Scalar sTargetColor;
 
-//void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
-//    if (event == EVENT_LBUTTONDOWN) {
-//        Point p = Point(x, y);
-//        cout << ((Mat *) userdata)->at<Vec3b>(p) << endl;
-//    }
-//}
+void CallBackFunc(int event, int x, int y, int flags, void *userdata) {
+    if (event == EVENT_LBUTTONDOWN) {
+        Point p = Point(x, y);
+        cout << ((Mat *) userdata)->at<Vec3b>(p) << endl;
+    }
+}
 
 #endif
 
-bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
-            Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient,
-            const float zCoefficient, rs2::depth_frame &depth) {
+bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
+            const Mat &lookUpTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
 
-    armors.clear();
+    Mat pDarkImage, pHSV, pBinaryColor, pBinaryBrightness;
+    vector<Armor> resultArmors;
 
-    Size size = mSrcImage.size();
-    int type = mSrcImage.type();
-
-    cuda::GpuMat pSrcImage, pDarkImage(size, type), pHSV(size, type), pBinaryColor(size, CV_8UC1), pBinaryBrightness(
-            size, CV_8UC1);
-
-    pSrcImage.upload(mSrcImage);
-
-    //cuda::cvtColor(pSrcImage, pSrcImage, COLOR_RGB2BGR);
-
+    /// histogram equalization
+//    cvtColor(pSrcImage, pDarkImage, COLOR_BGR2YCrCb);
+//    vector<Mat> channels;
+//    split(pDarkImage, channels);
+//    equalizeHist(channels[0], channels[0]);
+//    merge(channels, pDarkImage);
+//    cvtColor(pDarkImage, pDarkImage, COLOR_YCrCb2BGR);
 
     ///gamma correction
-    lookupTable->transform(pSrcImage, pDarkImage);
+    LUT(pSrcImage, lookUpTable, pDarkImage);
 
     /// Color difference detection
     vector<Point> colorPoint;
-    cuda::cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
+    cvtColor(pDarkImage, pHSV, COLOR_BGR2HSV); //convert the original image into HSV colorspace
 
 #ifdef FBF
-    //    imshow("dark image", pDarkImage);
+    imshow("dark image", pDarkImage);
 #endif
 
-    inRange_gpu(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
+    inRange(pHSV, Scalar(0, 0, 200), Scalar(179, 200, 255), pBinaryBrightness);
 
     if (nTargetColor == TARGET_RED) {
-        cuda::GpuMat pBinaryColorLower(size, CV_8UC1), pBinaryColorUpper(size, CV_8UC1);
-        inRange_gpu(pHSV, Scalar(0, 0, 200), Scalar(30, 255, 255), pBinaryColorLower);
-        inRange_gpu(pHSV, Scalar(170, 0, 200), Scalar(179, 255, 255), pBinaryColorUpper);
-        cuda::bitwise_or(pBinaryColorLower, pBinaryColorUpper, pBinaryColor);
+        Mat pBinaryColorLower, pBinaryColorUpper;
+        inRange(pHSV, Scalar(0, 0, 200), Scalar(30, 255, 255), pBinaryColorLower);
+        inRange(pHSV, Scalar(170, 0, 200), Scalar(179, 255, 255), pBinaryColorUpper);
+        pBinaryColor = pBinaryColorLower | pBinaryColorUpper;
     } else {
-        inRange_gpu(pHSV, Scalar(85, 0, 200), Scalar(125, 255, 255), pBinaryColor);
+        inRange(pHSV, Scalar(85, 0, 200), Scalar(125, 255, 255), pBinaryColor);
     }
-    cuda::bitwise_or(pBinaryColor, pBinaryBrightness, pBinaryColor);
 
-    cv::Ptr<cv::cuda::CannyEdgeDetector> canny = cv::cuda::createCannyEdgeDetector(100, 300, 3, false);
-    canny->detect(pBinaryColor, pBinaryColor);
+    pBinaryColor = pBinaryBrightness | pBinaryColor;
 
-    Mat mHSV(size, type), mBinaryColor(size, CV_8UC1);
-    pBinaryColor.download(mBinaryColor);
-    pHSV.download(mHSV);
-
+    /// edge detection with Canny
+    blur(pBinaryColor, pBinaryColor, Size(3, 3));//use blur to reduce noise
+    Canny(pBinaryColor, pBinaryColor, 100, 200);
     vector<Vec4i> hierarchy;
     std::vector<std::vector<Point>> contours;
-    findContours(mBinaryColor, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    findContours(pBinaryColor, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
     vector<RotatedRect> minEllipse;
-
     /// Fit & filter ellipses
     auto contourSize = (unsigned int) contours.size();
     for (unsigned int i = 0; i < contourSize; i++) {
@@ -94,7 +82,7 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
         if (pointsOnContour > 5) {
             int red = 0, blue = 0;
             for (unsigned int j = 0; j < pointsOnContour; j++) {
-                int color = mHSV.at<Vec3b>(contours[i][j])[0];
+                int color = pHSV.at<Vec3b>(contours[i][j])[0];
                 if (color <= 60 || color >= 150) red++;
                 else blue++;
             }
@@ -112,49 +100,48 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
     }
 
 #ifdef FBF
-    imshow("binary color", mBinaryColor);
-    imshow("HSV", mHSV);
-//    imshow("ellipse", pBinaryBrightness);
+    imshow("binary color", pBinaryColor);
+    imshow("ellipse", pBinaryBrightness);
 #endif
     /// Match ellipses to form armors
     auto minEllipseSize = (int) minEllipse.size();
-    RotatedRect *e1, *e2;
+    RotatedRect e1, e2;
     for (int i = 0; i < minEllipseSize - 1; i++) {
         for (int j = i + 1; j < minEllipseSize; j++) {
-            e1 = &minEllipse[i];
-            e2 = &minEllipse[j];
-            float angleDifference = abs(e1->angle - e2->angle);
-            float heightDifferenceRatio = abs(e1->size.height - e2->size.height) / (e1->size.height + e2->size.height);
-            float widthDifferenceRatio = abs(e1->size.width - e2->size.width) / (e1->size.width + e2->size.width);
-            float xDifferenceRatio = abs(e1->center.x - e2->center.x) / (e1->size.height + e2->size.height);
-            float yDifferenceRatio = abs(e1->center.y - e2->center.y) / (e1->size.height + e2->size.height);
+            e1 = minEllipse[i];
+            e2 = minEllipse[j];
+            float angleDifference = abs(e1.angle - e2.angle);
+            float heightDifferenceRatio = abs(e1.size.height - e2.size.height) / (e1.size.height + e2.size.height);
+            float widthDifferenceRatio = abs(e1.size.width - e2.size.width) / (e1.size.width + e2.size.width);
+            float xDifferenceRatio = abs(e1.center.x - e2.center.x) / (e1.size.height + e2.size.height);
+            float yDifferenceRatio = abs(e1.center.y - e2.center.y) / (e1.size.height + e2.size.height);
             if ((angleDifference < 5 || angleDifference > 175) && heightDifferenceRatio < 0.2 &&
                 xDifferenceRatio > 0.5 &&
                 xDifferenceRatio < 3 && yDifferenceRatio < 0.3 && widthDifferenceRatio < 0.6) {
                 Armor tmpArmor;
-                if (e1->center.x > e2->center.x) {
-                    RotatedRect *tmp = e1;
+                if (e1.center.x > e2.center.x) {
+                    RotatedRect tmp = e1;
                     e1 = e2;
                     e2 = tmp;
                 }
-                tmpArmor.width = e2->center.x - e1->center.x;
-                tmpArmor.height = e1->size.height + e2->size.height;
-                float angle1 = e1->angle * (float) M_PI / 180;
-                float angle2 = e2->angle * (float) M_PI / 180;
+                tmpArmor.width = e2.center.x - e1.center.x;
+                tmpArmor.height = e1.size.height + e2.size.height;
+                float angle1 = e1.angle * (float) M_PI / 180;
+                float angle2 = e2.angle * (float) M_PI / 180;
                 float sin1 = sin(angle1), sin2 = sin(angle2), cos1 = cos(angle1), cos2 = cos(angle2);
-                Point upperLeft = Point((int) round(e1->center.x - sin1 * e1->size.height),
-                                        (int) round(e1->center.y + cos1 * e1->size.height));
-                Point lowerLeft = Point((int) round(e1->center.x + sin1 * e1->size.height),
-                                        (int) round(e1->center.y - cos1 * e1->size.height));
+                Point upperLeft = Point((int) round(e1.center.x - sin1 * e1.size.height),
+                                        (int) round(e1.center.y + cos1 * e1.size.height));
+                Point lowerLeft = Point((int) round(e1.center.x + sin1 * e1.size.height),
+                                        (int) round(e1.center.y - cos1 * e1.size.height));
                 if (upperLeft.y > lowerLeft.y) {
                     Point tmp = upperLeft;
                     upperLeft = lowerLeft;
                     lowerLeft = tmp;
                 }
-                Point upperRight = Point((int) round(e2->center.x - sin2 * e2->size.height),
-                                         (int) round(e2->center.y + cos2 * e2->size.height));
-                Point lowerRight = Point((int) round(e2->center.x + sin2 * e2->size.height),
-                                         (int) round(e2->center.y - cos2 * e2->size.height));
+                Point upperRight = Point((int) round(e2.center.x - sin2 * e2.size.height),
+                                         (int) round(e2.center.y + cos2 * e2.size.height));
+                Point lowerRight = Point((int) round(e2.center.x + sin2 * e2.size.height),
+                                         (int) round(e2.center.y - cos2 * e2.size.height));
                 if (upperRight.y > lowerRight.y) {
                     Point tmp = upperRight;
                     upperRight = lowerRight;
@@ -179,8 +166,7 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
                                                                       upperRight.x * lowerLeft.y)) /
                              ((-upperRight.x + lowerLeft.x) * (upperLeft.y - lowerRight.y) -
                               (-upperLeft.x + lowerRight.x) * (upperRight.y - lowerLeft.y));
-                //tmpArmor.z = zCoefficient / (e1->size.height + e2->size.height);
-                tmpArmor.z = depth.get_distance(tmpArmor.x, tmpArmor.y);
+                tmpArmor.z = zCoefficient / (e1.size.height + e2.size.height);
 
                 if (referenceArmor != nullptr) {
                     tmpArmor.internal_velocity_x = tmpArmor.x - referenceArmor->x;
@@ -191,23 +177,27 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
                 } else {
                     tmpArmor.angular_velocity_x = 0;
                     tmpArmor.angular_velocity_y = 0;
+
                     tmpArmor.internal_velocity_y = 0;
                     tmpArmor.internal_velocity_x = 0;
                     tmpArmor.velocity_z = 0;
                 }
-                armors.push_back(tmpArmor);
+                resultArmors.push_back(tmpArmor);
             }
         }
     }
-    return !armors.empty();
+    if (resultArmors.empty()) {
+        return false;
+    }
+    armors = resultArmors;
+    return true;
 }
 
 bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor &referenceArmor, Armor &armor,
-            Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient,
-            const float zCoefficient, rs2::depth_frame &depth) {
+            const Mat &lookupTable, const float xCoefficient, const float yCoefficient, const float zCoefficient) {
     vector<Armor> armors;
     bool found = detect(pSrcImage, curSearchArea, &referenceArmor, armors, lookupTable, xCoefficient, yCoefficient,
-                        zCoefficient, depth);
+                        zCoefficient);
     if (!found) return false;
     auto armorsCount = (unsigned int) armors.size();
     if (armorsCount > 1) {
@@ -270,82 +260,9 @@ void getSearchArea(vector<Armor> &armors, vector<Rect> &searchAreas, int width, 
     }
 }
 
-float getPitch(float y_tar,float z_tar){
-   int start_pitch = -10;
-   int end_pitch = 40;
-   float init_vel = 3.2;
-   float dragCoeff = 2;
-   float r = 0.0213;//radius 
-   float rho =1.205 ;//air density 
-   float Area = M_PI*r*r;
-   float m = 0.048; //mass
-   float g = 9.8; //gravity 
-   //float pitch_ref = 0;
-   float dt = 0.005;
-   //float final_time = 1;
-   int final_time = 200;	
-   float y_err = 0.10;
-   float z_err = 0.10;
-   //float t = 0.0;
-//#pragma omp parallel for num_threads(6)
-   for(int pitch = start_pitch; pitch <= end_pitch; pitch++) {
-	float pitchRad = pitch * 0.5 * M_PI/180.0;
-	//float rota[2][2];
-	float rota00 = cos(-pitchRad);
-	float rota01 = sin(-pitchRad);
-	float rota10 = -sin(-pitchRad);
-	float rota11 = rota00;
-    	
-	float y_pre = 0;
-	float z_pre = 0;
-	float y_ddot_pre = 0;
-	float z_ddot_pre = 0;
-	float y_dot_pre = init_vel;
-	float z_dot_pre = 0;
-	float speed = init_vel;
-	float y;
-	float z; 
-	float y_ddot;
-	float z_ddot;
-	float y_dot;
-	float z_dot;
-	float y_ground;
-	float z_ground;
-	for(int t = 0; t <= final_time; t++){
-		y_ddot = -0.5 * rho * Area * dragCoeff / m * speed * y_dot_pre - g * sin(pitchRad);
-		z_ddot = -0.5 * rho * Area * dragCoeff / m * speed * z_dot_pre - g * cos(pitchRad);
-		y_dot = y_dot_pre + y_ddot_pre*dt;
-		z_dot = z_dot_pre + z_ddot_pre*dt;
-		
-		y = y_pre + y_dot_pre*dt;
-		z = z_pre + z_dot_pre*dt;
-
-		y_ground = y * rota00 + z * rota01;
-		z_ground = y * rota10 + z * rota11;
-		//cout << y_ground << ',' << z_ground << endl;
-		//cout <<pitch<< endl;
-		//cout <<t<< endl;
-		if(abs(z_ground - z_tar) <= z_err && abs(y_ground - y_tar) <= y_err){
-			//pitch_ref = pitch;
-			//cout << pitch<< endl;
-			return pitch;
-		}
-
-		y_ddot_pre = y_ddot;
-		z_ddot_pre = z_ddot;
-		y_dot_pre = y_dot;
-		z_dot_pre = z_dot;
-		y_pre = y;
-		z_pre = z;		
-		speed = sqrt(y_dot*y_dot+z_dot*z_dot);
-	}
-   }
-   return 0;
-}
-
 int main(int argc, char **argv) {
 
-    //Mat pSrcImage;
+    Mat pSrcImage;
     FileStorage fs;
     if (argc > 1) {
         fs.open(argv[1], FileStorage::READ);
@@ -354,7 +271,6 @@ int main(int argc, char **argv) {
     }
     Settings settings;
     settings.read(fs);
-/*
     VideoCapture cap;
 
     if (settings.cameraID != -1) {
@@ -375,27 +291,6 @@ int main(int argc, char **argv) {
     cap.set(CV_CAP_PROP_EXPOSURE, settings.exposure);
 
     cap >> pSrcImage;
-*/
-
-    // Declare RealSense pipeline, encapsulating the actual device and sensors
-    rs2::config rsConfig;
-    rsConfig.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_BGR8, 60);
-    rs2::pipeline pipe;
-    // Start streaming with default recommended configuration
-    pipe.start(rsConfig);
-
-    rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
-    rs2::video_frame color = data.get_color_frame();
-
-    rs2::config depConfig;
-    depConfig.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 60);
-    rs2::pipeline pipe2;
-    pipe2.start(depConfig);
-    rs2::frameset data2 = pipe.wait_for_frames();
-    rs2::depth_frame depth = data2.get_depth_frame();
-    const int width = color.get_width();
-    const int height = color.get_height();
-    Mat pSrcImage(Size(width, height), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
 
 #ifndef NDEBUG
 
@@ -409,7 +304,7 @@ int main(int argc, char **argv) {
 
     namedWindow("Result image", WINDOW_AUTOSIZE);
 //    setMouseCallback("Result image", CallBackFunc, nullptr);
-/*
+
     printf("width = %.2f\n", cap.get(CV_CAP_PROP_FRAME_WIDTH));
     printf("height = %.2f\n", cap.get(CV_CAP_PROP_FRAME_HEIGHT));
     printf("fbs = %.2f\n", cap.get(CV_CAP_PROP_FPS));
@@ -418,7 +313,7 @@ int main(int argc, char **argv) {
     printf("saturation = %.2f\n", cap.get(CV_CAP_PROP_SATURATION));
     printf("hue = %.2f\n", cap.get(CV_CAP_PROP_HUE));
     printf("exposure = %.2f\n", cap.get(CV_CAP_PROP_EXPOSURE));
-*/
+
     bool playVideo = true;
     clock_t totalTime = clock();
     long int frameCount = 0;
@@ -432,26 +327,23 @@ int main(int argc, char **argv) {
     Mat lookUpTable(1, 256, CV_8U);
     uchar *p = lookUpTable.ptr();
 
-    //int width = pSrcImage.cols;
-    //int height = pSrcImage.rows;
+    int width = pSrcImage.cols;
+    int height = pSrcImage.rows;
 
     float xCoefficient = settings.viewingAngleX / width * settings.fps;
     float yCoefficient = settings.viewingAngleY / height * settings.fps;
 
     int midX = width / 2;
     int midY = height / 2;
-    float pitch = 0.0;
+
     Rect frame = Rect(0, 0, width, height);
 
-//#ifdef NDEBUG
-    //UART<Armor> uart;
-    UART<float> uart;
-//#endif
+#ifdef NDEBUG
+    I2C<Armor> i2c("/dev/i2c-1", 0x04);
+#endif
 
     for (int i = 0; i < 256; ++i)
         p[i] = saturate_cast<uchar>(pow(i / 255.0, 10) * 255.0);
-
-    Ptr<cuda::LookUpTable> lut = cuda::createLookUpTable(lookUpTable);
 
     for (int tenFrame = 0; pSrcImage.data; tenFrame++) {
 #ifndef NDEBUG
@@ -460,21 +352,20 @@ int main(int argc, char **argv) {
 
         auto searchAreaCount = (unsigned int) searchAreas.size();
         if (searchAreaCount == 0) {
-            detect(pSrcImage, frame, nullptr, armors, lut, xCoefficient, yCoefficient, settings.zCoefficient, depth);
+            detect(pSrcImage, frame, nullptr, armors, lookUpTable, xCoefficient, yCoefficient, settings.zCoefficient);
             tenFrame = 0;
         } else {
             // TODO - Multi-threading
             for (unsigned int i = 0; i < searchAreaCount; i++) {
                 Mat subImage(pSrcImage, searchAreas[i]);
-                bool found = detect(subImage, searchAreas[i], armors[i], armors[i], lut, xCoefficient, yCoefficient,
-                                    settings.zCoefficient, depth);
+                bool found = detect(subImage, searchAreas[i], armors[i], armors[i], lookUpTable, xCoefficient,
+                                    yCoefficient, settings.zCoefficient);
                 if (!found) {
                     armors.erase(armors.begin() + i);
                     searchAreas.erase(searchAreas.begin() + i);
                     searchAreaCount--;
                     i--;
                 }
-		
             }
             if (tenFrame == 11) {
                 ///cover all the known armors with black rect
@@ -485,45 +376,34 @@ int main(int argc, char **argv) {
                               Scalar(0, 0, 0), CV_FILLED);
                 }
                 vector<Armor> newArmors;
-                bool found = detect(pSrcImage, frame, nullptr, newArmors, lut, xCoefficient, yCoefficient,
-                                    settings.zCoefficient, depth);
+                bool found = detect(pSrcImage, frame, nullptr, newArmors, lookUpTable, xCoefficient, yCoefficient,
+                                    settings.zCoefficient);
                 if (found)
                     armors.insert(armors.end(), newArmors.begin(), newArmors.end());
                 tenFrame = 0;
-		//-------------------------new CODE---------------------------
-		//pitch = getPitch(armors[0].z,(armors[0].y * (armors[0].z*0.0021 - 0.00001)));
-		//cout<<res<<endl;
-		//--------------------------------------------------------------	
             }
         }
 
         auto numArmors = (unsigned int) armors.size();
         Armor *resultArmor = &armors[0];
         if (numArmors > 1) {
-            float minScore = (float) (abs(armors[0].x - midX) + abs(armors[0].y - midY) + armors[0].z +
-                                      pow(armors[0].internal_velocity_x, 2) + pow(armors[0].internal_velocity_y, 2) +
-                                      pow(armors[0].velocity_z, 2));
+            float minScore = (float)(abs(armors[0].x - midX) + abs(armors[0].y - midY) + armors[0].z +
+                                                pow(armors[0].internal_velocity_x, 2) + pow(armors[0].internal_velocity_y, 2) +
+                                                pow(armors[0].velocity_z, 2));
             for (unsigned int i = 1; i < numArmors; i++) {
                 //TODO - score formula
-                float score = (float) (abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z +
-                                       pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) +
-                                       pow(armors[i].velocity_z, 2)); // the smaller the better
+                float score = (float)(abs(armors[i].x - midX) + abs(armors[i].y - midY) + armors[i].z +
+                                                 pow(armors[i].internal_velocity_x, 2) + pow(armors[i].internal_velocity_y, 2) +
+                                                 pow(armors[i].velocity_z, 2)); // the smaller the better
                 if (score < minScore) {
                     minScore = score;
                     resultArmor = &armors[i];
-	            //Cal result
-		    //res = getAngle(resultArmor->z,(resultArmor->y * (resultArmor->z*0.0021 - 0.00001)));		
-		    //cout << getAngle(resultArmor->z,(resultArmor->y * (resultArmor->z*0.0021 - 0.00001))) << endl;	
                 }
             }
         }
-	if(numArmors > 0) {
-		pitch = getPitch(resultArmor->z, (240 - resultArmor->y) * (resultArmor->z*0.0021 - 0.00001));
-		cout << resultArmor->z << " " << (240 - resultArmor->y) * (resultArmor->z*0.0021 - 0.00001) << " " << pitch << endl;
-        }
-//#ifdef NDEBUG
-        uart.send(pitch);
-//#endif
+#ifdef NDEBUG
+        i2c.send(*resultArmor);
+#endif
         searchAreas.resize(numArmors);
         getSearchArea(armors, searchAreas, width, height);
 
@@ -534,9 +414,9 @@ int main(int argc, char **argv) {
             for (unsigned int i = 0; i < numArmors; i++) {
                 circle(pResultImage, Point(armors[i].x, armors[i].y), 5, sTargetColor, CV_FILLED);
                 rectangle(pResultImage, searchAreas[i], sTargetColor, 1);
-                putText(pResultImage, to_string(pitch) + " deg", Point(armors[i].x, armors[i].y),
+                putText(pResultImage, to_string(armors[i].z) + " m", Point(armors[i].x, armors[i].y),
                         FONT_HERSHEY_SIMPLEX,
-                        1, sTargetColor, 2);/*
+                        1, sTargetColor, 2);
                 putText(pResultImage, "vx: " + to_string(armors[i].angular_velocity_x) + " rad/s",
                         Point(armors[i].x, armors[i].y + 25), FONT_HERSHEY_SIMPLEX,
                         1, sTargetColor, 2);
@@ -546,7 +426,7 @@ int main(int argc, char **argv) {
                 putText(pResultImage, "vz: " + to_string(armors[i].velocity_z) + " m/s",
                         Point(armors[i].x, armors[i].y + 75),
                         FONT_HERSHEY_SIMPLEX,
-                        1, sTargetColor, 2);*/
+                        1, sTargetColor, 2);
             }
         }
         imshow("Result image", pResultImage);
@@ -561,25 +441,14 @@ int main(int argc, char **argv) {
             playVideo = !playVideo;
 //        else if(!numArmors)
 //            cin.get();
-        if (playVideo){
+        if (playVideo)
 #endif //ifndef NDEBUG
-            //cap >> pSrcImage;
-            data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
-            color = data.get_color_frame();
-            pSrcImage = Mat(Size(width, height), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
-            data2 = pipe2.wait_for_frames();
-            depth = data2.get_depth_frame();
-        }
-
-#ifndef NDEBUG
+            cap >> pSrcImage;
     }
+#ifndef NDEBUG
     cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << "s, FPS: "
          << frameCount / (double) (clock() - totalTime) * CLOCKS_PER_SEC << endl;
 #endif
-    //cap.release();
-    pipe.stop();
-    pipe2.stop();
-    depConfig.disable_stream(RS2_STREAM_DEPTH);
-    rsConfig.disable_stream(RS2_STREAM_COLOR);
+    cap.release();
     return 0;
 }
