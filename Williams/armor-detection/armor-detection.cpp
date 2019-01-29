@@ -4,11 +4,14 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include <inRange_gpu.h>
+#include <librealsense2/rs.hpp>
+#include <math.h>
 
 #include "Settings.h"
 #include "SearchArea.h"
 #include "Armor.h"
-#include "I2C.h"
+#include "UART.h"
+
 
 using namespace cv;
 using namespace std;
@@ -34,7 +37,7 @@ Scalar sTargetColor;
 
 bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *referenceArmor, vector<Armor> &armors,
             Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient,
-            const float zCoefficient) {
+            const float zCoefficient, rs2::depth_frame &depth) {
 
     armors.clear();
 
@@ -45,6 +48,8 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
             size, CV_8UC1);
 
     pSrcImage.upload(mSrcImage);
+
+    //cuda::cvtColor(pSrcImage, pSrcImage, COLOR_RGB2BGR);
 
 
     ///gamma correction
@@ -174,7 +179,8 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
                                                                       upperRight.x * lowerLeft.y)) /
                              ((-upperRight.x + lowerLeft.x) * (upperLeft.y - lowerRight.y) -
                               (-upperLeft.x + lowerRight.x) * (upperRight.y - lowerLeft.y));
-                tmpArmor.z = zCoefficient / (e1->size.height + e2->size.height);
+                //tmpArmor.z = zCoefficient / (e1->size.height + e2->size.height);
+                tmpArmor.z = depth.get_distance(tmpArmor.x, tmpArmor.y);
 
                 if (referenceArmor != nullptr) {
                     tmpArmor.internal_velocity_x = tmpArmor.x - referenceArmor->x;
@@ -185,7 +191,6 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
                 } else {
                     tmpArmor.angular_velocity_x = 0;
                     tmpArmor.angular_velocity_y = 0;
-
                     tmpArmor.internal_velocity_y = 0;
                     tmpArmor.internal_velocity_x = 0;
                     tmpArmor.velocity_z = 0;
@@ -199,10 +204,10 @@ bool detect(const Mat &mSrcImage, const Rect &curSearchArea, const Armor *refere
 
 bool detect(const Mat &pSrcImage, const Rect &curSearchArea, const Armor &referenceArmor, Armor &armor,
             Ptr<cuda::LookUpTable> lookupTable, const float xCoefficient, const float yCoefficient,
-            const float zCoefficient) {
+            const float zCoefficient, rs2::depth_frame &depth) {
     vector<Armor> armors;
     bool found = detect(pSrcImage, curSearchArea, &referenceArmor, armors, lookupTable, xCoefficient, yCoefficient,
-                        zCoefficient);
+                        zCoefficient, depth);
     if (!found) return false;
     auto armorsCount = (unsigned int) armors.size();
     if (armorsCount > 1) {
@@ -265,9 +270,82 @@ void getSearchArea(vector<Armor> &armors, vector<Rect> &searchAreas, int width, 
     }
 }
 
+float getPitch(float y_tar,float z_tar){
+   int start_pitch = -10;
+   int end_pitch = 40;
+   float init_vel = 3.2;
+   float dragCoeff = 2;
+   float r = 0.0213;//radius 
+   float rho =1.205 ;//air density 
+   float Area = M_PI*r*r;
+   float m = 0.048; //mass
+   float g = 9.8; //gravity 
+   //float pitch_ref = 0;
+   float dt = 0.005;
+   //float final_time = 1;
+   int final_time = 200;	
+   float y_err = 0.10;
+   float z_err = 0.10;
+   //float t = 0.0;
+//#pragma omp parallel for num_threads(6)
+   for(int pitch = start_pitch; pitch <= end_pitch; pitch++) {
+	float pitchRad = pitch * 0.5 * M_PI/180.0;
+	//float rota[2][2];
+	float rota00 = cos(-pitchRad);
+	float rota01 = sin(-pitchRad);
+	float rota10 = -sin(-pitchRad);
+	float rota11 = rota00;
+    	
+	float y_pre = 0;
+	float z_pre = 0;
+	float y_ddot_pre = 0;
+	float z_ddot_pre = 0;
+	float y_dot_pre = init_vel;
+	float z_dot_pre = 0;
+	float speed = init_vel;
+	float y;
+	float z; 
+	float y_ddot;
+	float z_ddot;
+	float y_dot;
+	float z_dot;
+	float y_ground;
+	float z_ground;
+	for(int t = 0; t <= final_time; t++){
+		y_ddot = -0.5 * rho * Area * dragCoeff / m * speed * y_dot_pre - g * sin(pitchRad);
+		z_ddot = -0.5 * rho * Area * dragCoeff / m * speed * z_dot_pre - g * cos(pitchRad);
+		y_dot = y_dot_pre + y_ddot_pre*dt;
+		z_dot = z_dot_pre + z_ddot_pre*dt;
+		
+		y = y_pre + y_dot_pre*dt;
+		z = z_pre + z_dot_pre*dt;
+
+		y_ground = y * rota00 + z * rota01;
+		z_ground = y * rota10 + z * rota11;
+		//cout << y_ground << ',' << z_ground << endl;
+		//cout <<pitch<< endl;
+		//cout <<t<< endl;
+		if(abs(z_ground - z_tar) <= z_err && abs(y_ground - y_tar) <= y_err){
+			//pitch_ref = pitch;
+			//cout << pitch<< endl;
+			return pitch;
+		}
+
+		y_ddot_pre = y_ddot;
+		z_ddot_pre = z_ddot;
+		y_dot_pre = y_dot;
+		z_dot_pre = z_dot;
+		y_pre = y;
+		z_pre = z;		
+		speed = sqrt(y_dot*y_dot+z_dot*z_dot);
+	}
+   }
+   return 0;
+}
+
 int main(int argc, char **argv) {
 
-    Mat pSrcImage;
+    //Mat pSrcImage;
     FileStorage fs;
     if (argc > 1) {
         fs.open(argv[1], FileStorage::READ);
@@ -276,14 +354,13 @@ int main(int argc, char **argv) {
     }
     Settings settings;
     settings.read(fs);
+/*
     VideoCapture cap;
-
     if (settings.cameraID != -1) {
         cap.open(settings.cameraID);
     } else {
         cap.open(settings.fileName);
     }
-
     /// Camera setup
     cap.set(CV_CAP_PROP_FRAME_WIDTH, settings.width);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT, settings.height);
@@ -294,8 +371,28 @@ int main(int argc, char **argv) {
     cap.set(CV_CAP_PROP_HUE, settings.hue);
     cap.set(CV_CAP_PROP_GAIN, settings.hue);
     cap.set(CV_CAP_PROP_EXPOSURE, settings.exposure);
-
     cap >> pSrcImage;
+*/
+
+    // Declare RealSense pipeline, encapsulating the actual device and sensors
+    rs2::config rsConfig;
+    rsConfig.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_BGR8, 60);
+    rs2::pipeline pipe;
+    // Start streaming with default recommended configuration
+    pipe.start(rsConfig);
+
+    rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
+    rs2::video_frame color = data.get_color_frame();
+
+    rs2::config depConfig;
+    depConfig.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 60);
+    rs2::pipeline pipe2;
+    pipe2.start(depConfig);
+    rs2::frameset data2 = pipe.wait_for_frames();
+    rs2::depth_frame depth = data2.get_depth_frame();
+    const int width = color.get_width();
+    const int height = color.get_height();
+    Mat pSrcImage(Size(width, height), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
 
 #ifndef NDEBUG
 
@@ -309,7 +406,7 @@ int main(int argc, char **argv) {
 
     namedWindow("Result image", WINDOW_AUTOSIZE);
 //    setMouseCallback("Result image", CallBackFunc, nullptr);
-
+/*
     printf("width = %.2f\n", cap.get(CV_CAP_PROP_FRAME_WIDTH));
     printf("height = %.2f\n", cap.get(CV_CAP_PROP_FRAME_HEIGHT));
     printf("fbs = %.2f\n", cap.get(CV_CAP_PROP_FPS));
@@ -318,7 +415,7 @@ int main(int argc, char **argv) {
     printf("saturation = %.2f\n", cap.get(CV_CAP_PROP_SATURATION));
     printf("hue = %.2f\n", cap.get(CV_CAP_PROP_HUE));
     printf("exposure = %.2f\n", cap.get(CV_CAP_PROP_EXPOSURE));
-
+*/
     bool playVideo = true;
     clock_t totalTime = clock();
     long int frameCount = 0;
@@ -332,20 +429,21 @@ int main(int argc, char **argv) {
     Mat lookUpTable(1, 256, CV_8U);
     uchar *p = lookUpTable.ptr();
 
-    int width = pSrcImage.cols;
-    int height = pSrcImage.rows;
+    //int width = pSrcImage.cols;
+    //int height = pSrcImage.rows;
 
     float xCoefficient = settings.viewingAngleX / width * settings.fps;
     float yCoefficient = settings.viewingAngleY / height * settings.fps;
 
     int midX = width / 2;
     int midY = height / 2;
-
+    float pitch = 0.0;
     Rect frame = Rect(0, 0, width, height);
 
-#ifdef NDEBUG
-    I2C<Armor> i2c("/dev/i2c-1", 0x04);
-#endif
+//#ifdef NDEBUG
+    //UART<Armor> uart;
+    UART<float> uart;
+//#endif
 
     for (int i = 0; i < 256; ++i)
         p[i] = saturate_cast<uchar>(pow(i / 255.0, 10) * 255.0);
@@ -359,20 +457,21 @@ int main(int argc, char **argv) {
 
         auto searchAreaCount = (unsigned int) searchAreas.size();
         if (searchAreaCount == 0) {
-            detect(pSrcImage, frame, nullptr, armors, lut, xCoefficient, yCoefficient, settings.zCoefficient);
+            detect(pSrcImage, frame, nullptr, armors, lut, xCoefficient, yCoefficient, settings.zCoefficient, depth);
             tenFrame = 0;
         } else {
             // TODO - Multi-threading
             for (unsigned int i = 0; i < searchAreaCount; i++) {
                 Mat subImage(pSrcImage, searchAreas[i]);
                 bool found = detect(subImage, searchAreas[i], armors[i], armors[i], lut, xCoefficient, yCoefficient,
-                                    settings.zCoefficient);
+                                    settings.zCoefficient, depth);
                 if (!found) {
                     armors.erase(armors.begin() + i);
                     searchAreas.erase(searchAreas.begin() + i);
                     searchAreaCount--;
                     i--;
                 }
+		
             }
             if (tenFrame == 11) {
                 ///cover all the known armors with black rect
@@ -384,10 +483,14 @@ int main(int argc, char **argv) {
                 }
                 vector<Armor> newArmors;
                 bool found = detect(pSrcImage, frame, nullptr, newArmors, lut, xCoefficient, yCoefficient,
-                                    settings.zCoefficient);
+                                    settings.zCoefficient, depth);
                 if (found)
                     armors.insert(armors.end(), newArmors.begin(), newArmors.end());
                 tenFrame = 0;
+		//-------------------------new CODE---------------------------
+		//pitch = getPitch(armors[0].z,(armors[0].y * (armors[0].z*0.0021 - 0.00001)));
+		//cout<<res<<endl;
+		//--------------------------------------------------------------	
             }
         }
 
@@ -405,12 +508,19 @@ int main(int argc, char **argv) {
                 if (score < minScore) {
                     minScore = score;
                     resultArmor = &armors[i];
+	            //Cal result
+		    //res = getAngle(resultArmor->z,(resultArmor->y * (resultArmor->z*0.0021 - 0.00001)));		
+		    //cout << getAngle(resultArmor->z,(resultArmor->y * (resultArmor->z*0.0021 - 0.00001))) << endl;	
                 }
             }
         }
-#ifdef NDEBUG
-        i2c.send(*resultArmor);
-#endif
+	if(numArmors > 0) {
+		pitch = getPitch(resultArmor->z, (240 - resultArmor->y) * (resultArmor->z*0.0021 - 0.00001));
+		cout << resultArmor->z << " " << (240 - resultArmor->y) * (resultArmor->z*0.0021 - 0.00001) << " " << pitch << endl;
+        }
+//#ifdef NDEBUG
+        uart.send(pitch);
+//#endif
         searchAreas.resize(numArmors);
         getSearchArea(armors, searchAreas, width, height);
 
@@ -421,9 +531,9 @@ int main(int argc, char **argv) {
             for (unsigned int i = 0; i < numArmors; i++) {
                 circle(pResultImage, Point(armors[i].x, armors[i].y), 5, sTargetColor, CV_FILLED);
                 rectangle(pResultImage, searchAreas[i], sTargetColor, 1);
-                putText(pResultImage, to_string(armors[i].z) + " m", Point(armors[i].x, armors[i].y),
+                putText(pResultImage, to_string(pitch) + " deg", Point(armors[i].x, armors[i].y),
                         FONT_HERSHEY_SIMPLEX,
-                        1, sTargetColor, 2);
+                        1, sTargetColor, 2);/*
                 putText(pResultImage, "vx: " + to_string(armors[i].angular_velocity_x) + " rad/s",
                         Point(armors[i].x, armors[i].y + 25), FONT_HERSHEY_SIMPLEX,
                         1, sTargetColor, 2);
@@ -433,7 +543,7 @@ int main(int argc, char **argv) {
                 putText(pResultImage, "vz: " + to_string(armors[i].velocity_z) + " m/s",
                         Point(armors[i].x, armors[i].y + 75),
                         FONT_HERSHEY_SIMPLEX,
-                        1, sTargetColor, 2);
+                        1, sTargetColor, 2);*/
             }
         }
         imshow("Result image", pResultImage);
@@ -448,14 +558,25 @@ int main(int argc, char **argv) {
             playVideo = !playVideo;
 //        else if(!numArmors)
 //            cin.get();
-        if (playVideo)
+        if (playVideo){
 #endif //ifndef NDEBUG
-            cap >> pSrcImage;
-    }
+            //cap >> pSrcImage;
+            data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
+            color = data.get_color_frame();
+            pSrcImage = Mat(Size(width, height), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
+            data2 = pipe2.wait_for_frames();
+            depth = data2.get_depth_frame();
+        }
+
 #ifndef NDEBUG
+    }
     cout << "average time: " << (double) (clock() - totalTime) / CLOCKS_PER_SEC / frameCount << "s, FPS: "
          << frameCount / (double) (clock() - totalTime) * CLOCKS_PER_SEC << endl;
 #endif
-    cap.release();
+    //cap.release();
+    pipe.stop();
+    pipe2.stop();
+    depConfig.disable_stream(RS2_STREAM_DEPTH);
+    rsConfig.disable_stream(RS2_STREAM_COLOR);
     return 0;
 }
