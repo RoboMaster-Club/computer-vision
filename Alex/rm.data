@@ -1,0 +1,5 @@
+classes=1
+train=/home/alex/Documents/RM-CV/darknet/training/train.txt
+valid=/home/alex/Documents/RM-CV/darknet/training/test.txt
+names=/home/alex/Documents/RM-CV/darknet/training/rm.names
+backup=./backup
